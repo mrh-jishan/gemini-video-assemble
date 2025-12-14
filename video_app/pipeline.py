@@ -27,25 +27,36 @@ def _build_image_client():
 
 image_client = _build_image_client()
 tts_client = GoogleTTSSynthesizer(settings.tts_lang)
-assembler = VideoAssembler(
-    crossfade_sec=settings.crossfade_sec,
-    kenburns_zoom=settings.kenburns_zoom,
-    enable_subtitles=settings.enable_subtitles,
-    subtitle_opts={
-        "fontsize": settings.subtitle_fontsize,
-        "font": settings.subtitle_font,
-        "color": settings.subtitle_color,
-        "stroke_color": settings.subtitle_stroke_color,
-        "stroke_width": settings.subtitle_stroke_width,
-    },
-)
+def _aspect_to_size(aspect: str) -> tuple[int, int]:
+    if aspect == "vertical":
+        return settings.vertical_size
+    return settings.horizontal_size
 
 
-def build_video_from_prompt(prompt: str, duration: int, scenes: int) -> Path:
+def _build_assembler(aspect: str) -> VideoAssembler:
+    target_size = _aspect_to_size(aspect)
+    return VideoAssembler(
+        crossfade_sec=settings.crossfade_sec,
+        kenburns_zoom=settings.kenburns_zoom,
+        enable_subtitles=settings.enable_subtitles,
+        subtitle_opts={
+            "fontsize": settings.subtitle_fontsize,
+            "font": settings.subtitle_font,
+            "color": settings.subtitle_color,
+            "stroke_color": settings.subtitle_stroke_color,
+            "stroke_width": settings.subtitle_stroke_width,
+            "target_size": target_size,
+        },
+    )
+
+
+def build_video_from_prompt(prompt: str, duration: int, scenes: int, aspect: str | None = None) -> Path:
     working_dir = Path(tempfile.mkdtemp(prefix="video-job-"))
     scene_plan = scene_planner.plan(prompt, duration, scenes)
+    aspect_choice = aspect or settings.default_aspect
+    assembler = _build_assembler(aspect_choice)
 
-    print(f"Planned {len(scene_plan)} scenes for prompt '{prompt}'")    
+    print(f"Planned {len(scene_plan)} scenes for prompt '{prompt}'")
 
     for idx, scene in enumerate(scene_plan):
         scene.image_path = working_dir / f"scene_{idx}.png"

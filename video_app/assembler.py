@@ -29,6 +29,7 @@ class VideoAssembler:
         self.kenburns_zoom = kenburns_zoom
         self.enable_subtitles = enable_subtitles
         self.subtitle_opts = subtitle_opts or {}
+        self.target_size = subtitle_opts.get("target_size") if subtitle_opts else None
 
     def _subtitle_segments(self, text: str, duration: float) -> List[Dict]:
         """Split subtitle text into paced segments to reduce crowding."""
@@ -110,6 +111,11 @@ class VideoAssembler:
             audio_clip = AudioFileClip(str(scene.audio_path))
             duration = max(scene.duration_sec, audio_clip.duration + 0.2)
             image_clip = ImageClip(str(scene.image_path)).with_duration(duration)
+            if self.target_size:
+                try:
+                    image_clip = image_clip.resize(newsize=self.target_size)
+                except Exception:
+                    pass
             if self.kenburns_zoom > 0:
                 image_clip = image_clip.resized(
                     lambda t: 1 + (self.kenburns_zoom * (t / duration))
@@ -118,8 +124,15 @@ class VideoAssembler:
             if self.enable_subtitles and scene.subtitle:
                 # Derive a width that keeps subtitles within frame bounds.
                 clip_width = None
+                clip_width = None
                 try:
-                    clip_width = int(image_clip.size[0] * 0.9) if image_clip.size else None
+                    base_width = (
+                        self.target_size[0]
+                        if self.target_size
+                        else (image_clip.size[0] if image_clip.size else None)
+                    )
+                    if base_width:
+                        clip_width = int(base_width * 0.9)
                 except Exception:
                     clip_width = None
 

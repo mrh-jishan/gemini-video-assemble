@@ -14,12 +14,13 @@ def create_app() -> Flask:
         prompt = body.get("prompt")
         duration = int(body.get("duration", 60))
         scenes = int(body.get("scenes", 5))
+        aspect = body.get("aspect") or settings.default_aspect
 
         if not prompt:
             return jsonify({"error": "prompt is required"}), 400
 
         try:
-            output_path = build_video_from_prompt(prompt, duration, scenes)
+            output_path = build_video_from_prompt(prompt, duration, scenes, aspect)
         except Exception as exc:  # noqa: BLE001
             return jsonify({"error": str(exc)}), 500
 
@@ -41,6 +42,7 @@ def create_app() -> Flask:
         prompt = ""
         duration = 60
         scenes = 5
+        aspect = settings.default_aspect
         video_path = None
         error = None
 
@@ -49,11 +51,12 @@ def create_app() -> Flask:
             prompt = form.get("prompt", "").strip()
             duration = int(form.get("duration") or 60)
             scenes = int(form.get("scenes") or 5)
+            aspect = form.get("aspect") or settings.default_aspect
             if not prompt:
                 error = "Prompt is required."
             else:
                 try:
-                    video_path = build_video_from_prompt(prompt, duration, scenes)
+                    video_path = build_video_from_prompt(prompt, duration, scenes, aspect)
                 except Exception as exc:  # noqa: BLE001
                     error = str(exc)
 
@@ -62,6 +65,7 @@ def create_app() -> Flask:
             prompt=prompt,
             duration=duration,
             scenes=scenes,
+            aspect=aspect,
             video_path=video_path,
             error=error,
         )

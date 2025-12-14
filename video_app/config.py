@@ -19,10 +19,6 @@ class Settings:
         # Paths
         self.output_dir = Path(os.getenv("OUTPUT_DIR", "renders")).resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_dir = Path(
-            os.getenv("IMAGE_CACHE_DIR", self.output_dir / "image-cache")
-        ).resolve()
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Video styling
         self.crossfade_sec = float(os.getenv("CROSSFADE_SEC", "0.6"))
@@ -39,6 +35,16 @@ class Settings:
         self.image_style = os.getenv(
             "IMAGE_STYLE",
             "cinematic, cohesive color palette, volumetric light, ultra detailed, 16:9",
+        )
+        self.default_aspect = os.getenv("VIDEO_ASPECT", "horizontal")  # horizontal | vertical
+        # Target sizes for horizontal (16:9) and vertical (9:16).
+        self.horizontal_size = (
+            int(os.getenv("HORIZONTAL_WIDTH", "1280")),
+            int(os.getenv("HORIZONTAL_HEIGHT", "720")),
+        )
+        self.vertical_size = (
+            int(os.getenv("VERTICAL_WIDTH", "720")),
+            int(os.getenv("VERTICAL_HEIGHT", "1280")),
         )
 
         self.port = int(os.getenv("PORT", "5000"))
