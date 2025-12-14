@@ -1,0 +1,63 @@
+import shutil
+import tempfile
+import uuid
+from pathlib import Path
+
+from google import genai
+
+from .assembler import VideoAssembler
+from .config import Settings
+from .images import GeminiImageClient
+from .models import Scene
+from .planner import PromptBuilder, ScenePlanner
+from .tts import GoogleTTSSynthesizer
+
+
+settings = Settings()
+gemini_client = genai.Client(api_key=settings.google_api_key)
+scene_planner = ScenePlanner(gemini_client, settings.gemini_text_model)
+prompt_builder = PromptBuilder(settings.image_style)
+
+
+def _build_image_client():
+    model = settings.gemini_image_model
+    method = "generate_images" if "imagen" in model.lower() else "generate_content"
+    return GeminiImageClient(settings.google_api_key, model, method)
+
+
+image_client = _build_image_client()
+tts_client = GoogleTTSSynthesizer(settings.tts_lang)
+assembler = VideoAssembler(
+    crossfade_sec=settings.crossfade_sec,
+    kenburns_zoom=settings.kenburns_zoom,
+    enable_subtitles=settings.enable_subtitles,
+    subtitle_opts={
+        "fontsize": settings.subtitle_fontsize,
+        "font": settings.subtitle_font,
+        "color": settings.subtitle_color,
+        "stroke_color": settings.subtitle_stroke_color,
+        "stroke_width": settings.subtitle_stroke_width,
+    },
+)
+
+
+def build_video_from_prompt(prompt: str, duration: int, scenes: int) -> Path:
+    working_dir = Path(tempfile.mkdtemp(prefix="video-job-"))
+    scene_plan = scene_planner.plan(prompt, duration, scenes)
+
+    print(f"Planned {len(scene_plan)} scenes for prompt '{prompt}'")    
+
+    for idx, scene in enumerate(scene_plan):
+        scene.image_path = working_dir / f"scene_{idx}.png"
+        scene.audio_path = working_dir / f"scene_{idx}.mp3"
+        full_prompt = prompt_builder.build(scene)
+        
+        image_client.generate(full_prompt, scene.image_path)
+        tts_client.synthesize(scene.narration, scene.audio_path)
+        scene.subtitle = scene.narration
+
+    output_path = settings.output_dir / f"{uuid.uuid4()}.mp4"
+    assembler.build(scene_plan, output_path)
+    
+    shutil.rmtree(working_dir, ignore_errors=True)
+    return output_path

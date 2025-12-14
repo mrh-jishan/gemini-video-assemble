@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt to Video</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --accent: #22d3ee;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.12), transparent 40%),
+                  radial-gradient(circle at 80% 10%, rgba(94, 234, 212, 0.12), transparent 35%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px 48px;
+    }
+    .shell {
+      width: min(980px, 100%);
+      background: linear-gradient(135deg, rgba(17,24,39,0.9), rgba(15,23,42,0.9));
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      letter-spacing: -0.01em;
+    }
+    p.lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+    input, textarea, button {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      background: #0b1222;
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 15px;
+      outline: none;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(34,211,238,0.2);
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    .grid { display: grid; gap: 16px; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+    button {
+      background: linear-gradient(120deg, #22d3ee, #06b6d4);
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(34,211,238,0.35);
+      margin-top: 4px;
+    }
+    button:hover { filter: brightness(1.03); }
+    .status {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #0b1222;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .error { border-color: #f43f5e; color: #fecdd3; }
+    .success { border-color: #22d3ee; color: #a5f3fc; }
+    .link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #67e8f9;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .footer {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <h1>Prompt → Video</h1>
+    <p class="lead">Generate a narrated, multi-scene clip with smooth transitions.</p>
+
+    <form method="POST" class="grid">
+      <div>
+        <label for="prompt">Prompt</label>
+        <textarea id="prompt" name="prompt" required>{{ prompt }}</textarea>
+      </div>
+      <div class="row">
+        <div>
+          <label for="duration">Duration (sec)</label>
+          <input id="duration" name="duration" type="number" min="10" max="600" value="{{ duration }}">
+        </div>
+        <div>
+          <label for="scenes">Scenes</label>
+          <input id="scenes" name="scenes" type="number" min="2" max="12" value="{{ scenes }}">
+        </div>
+      </div>
+      <button type="submit">Render Video</button>
+    </form>
+
+    {% if error %}
+    <div class="status error">{{ error }}</div>
+    {% endif %}
+
+    {% if video_path %}
+    <div class="status success">
+      Video ready.
+      <a class="link" href="{{ url_for('download', filename=video_path.name if video_path else '') }}">Download</a>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+      Uses OpenAI/Gemini for images and TTS + LLM for planning. Keep prompts concise to control cost.
+    </div>
+  </div>
+</body>
+</html>
