@@ -92,6 +92,28 @@ class VideoAssembler:
         # If we run out of fonts, raise the last error so the user knows
         print(f"Failed to render subtitle '{text}'. Last error: {last_error}")
         return None
+
+    def _fit_to_frame(self, clip):
+        """Resize/crop to target size while preserving aspect ratio."""
+        if not self.target_size or not hasattr(clip, "size") or not clip.size:
+            return clip
+        tw, th = self.target_size
+        try:
+            cw, ch = clip.size
+            if not cw or not ch:
+                return clip
+            scale = max(tw / cw, th / ch)
+            resized = clip.resize(newsize=(int(cw * scale), int(ch * scale)))
+            # Center crop to exact size.
+            cropped = resized.crop(
+                x_center=resized.w / 2,
+                y_center=resized.h / 2,
+                width=tw,
+                height=th,
+            )
+            return cropped
+        except Exception:
+            return clip
     
     def build(self, scenes: List[Scene], output_path: Path) -> Path:
         print(f"Building video at {output_path} with {len(scenes)} scenes")
@@ -109,11 +131,7 @@ class VideoAssembler:
                 image_clip = ImageClip(str(scene.image_path)).with_duration(duration)
             else:
                 raise RuntimeError("Scene missing visual asset")
-            if self.target_size:
-                try:
-                    image_clip = image_clip.resize(newsize=self.target_size)
-                except Exception:
-                    pass
+            image_clip = self._fit_to_frame(image_clip)
             if self.kenburns_zoom > 0:
                 image_clip = image_clip.resized(
                     lambda t: 1 + (self.kenburns_zoom * (t / duration))

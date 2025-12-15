@@ -114,7 +114,7 @@ class PixabayImageClient:
         dest.write_bytes(img_resp.content)
         return dest
 
-    def generate_video(self, search_term: str, dest: Path, orientation: str = "horizontal") -> Path:
+    def generate_video(self, search_term: str, dest: Path, target_size: tuple[int, int]) -> Path:
         params = {
             "key": self.api_key,
             "q": search_term,
@@ -128,10 +128,18 @@ class PixabayImageClient:
             raise RuntimeError("Pixabay returned no videos")
         hit = hits[0]
         videos = hit.get("videos") or {}
-        # Prefer orientation-appropriate resolution.
-        candidate = videos.get("medium") or videos.get("large") or videos.get("small")
-        if not candidate or not candidate.get("url"):
+        candidates = []
+        for key in ("large", "medium", "small", "tiny"):
+            entry = videos.get(key)
+            if entry and entry.get("url"):
+                candidates.append(entry)
+        if not candidates:
             raise RuntimeError("Pixabay video payload missing URL")
+        target_w = target_size[0] if target_size else 0
+        candidate = sorted(
+            candidates,
+            key=lambda e: abs((e.get("width") or target_w) - target_w),
+        )[0]
         url = candidate["url"]
         v_resp = requests.get(url, timeout=120)
         if v_resp.status_code != 200:

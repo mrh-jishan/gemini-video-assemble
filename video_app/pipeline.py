@@ -62,7 +62,7 @@ def build_video_from_prompt(
     assembler = _build_assembler(aspect_choice)
     # Select image provider: gemini (default), stock, or mix (from UI).
     provider = (image_provider or settings.default_image_provider).lower()
-    orientation = "vertical" if aspect_choice == "vertical" else "horizontal"
+    target_size = _aspect_to_size(aspect_choice)
     pixabay_client = None
     if provider in ("stock", "mix"):
         if not settings.pixabay_key:
@@ -81,7 +81,7 @@ def build_video_from_prompt(
             search_term = search_term[:100]
         if provider == "stock":
             try:
-                pixabay_client.generate_video(search_term, scene.video_path, orientation=orientation)
+                pixabay_client.generate_video(search_term, scene.video_path, target_size=target_size)
             except Exception:
                 pixabay_client.generate_image(search_term, scene.image_path)
         elif provider == "mix":
@@ -91,7 +91,7 @@ def build_video_from_prompt(
             except Exception:
                 if pixabay_client:
                     try:
-                        pixabay_client.generate_video(search_term, scene.video_path, orientation=orientation)
+                        pixabay_client.generate_video(search_term, scene.video_path, target_size=target_size)
                     except Exception:
                         pixabay_client.generate_image(search_term, scene.image_path)
         else:
