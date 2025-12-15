@@ -9,8 +9,8 @@ class Scene:
     narration: str
     visual_prompt: str
     duration_sec: float
+    search_query: Optional[str] = None
     subtitle: Optional[str] = None
     image_path: Optional[Path] = None
     audio_path: Optional[Path] = None
-
-
+    video_path: Optional[Path] = None

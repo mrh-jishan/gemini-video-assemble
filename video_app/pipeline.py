@@ -7,7 +7,7 @@ from google import genai
 
 from .assembler import VideoAssembler
 from .config import Settings
-from .images import GeminiImageClient
+from .images import GeminiImageClient, PixabayImageClient
 from .models import Scene
 from .planner import PromptBuilder, ScenePlanner
 from .tts import GoogleTTSSynthesizer
@@ -25,7 +25,6 @@ def _build_image_client():
     return GeminiImageClient(settings.google_api_key, model, method)
 
 
-image_client = _build_image_client()
 tts_client = GoogleTTSSynthesizer(settings.tts_lang)
 def _aspect_to_size(aspect: str) -> tuple[int, int]:
     if aspect == "vertical":
@@ -50,20 +49,53 @@ def _build_assembler(aspect: str) -> VideoAssembler:
     )
 
 
-def build_video_from_prompt(prompt: str, duration: int, scenes: int, aspect: str | None = None) -> Path:
+def build_video_from_prompt(
+    prompt: str,
+    duration: int,
+    scenes: int,
+    aspect: str | None = None,
+    image_provider: str | None = None,
+) -> Path:
     working_dir = Path(tempfile.mkdtemp(prefix="video-job-"))
     scene_plan = scene_planner.plan(prompt, duration, scenes)
     aspect_choice = aspect or settings.default_aspect
     assembler = _build_assembler(aspect_choice)
+    # Select image provider: gemini (default), stock, or mix (from UI).
+    provider = (image_provider or settings.default_image_provider).lower()
+    orientation = "vertical" if aspect_choice == "vertical" else "horizontal"
+    pixabay_client = None
+    if provider in ("stock", "mix"):
+        if not settings.pixabay_key:
+            raise RuntimeError("PIXABAY_KEY required for stock/mix provider")
+        pixabay_client = PixabayImageClient(settings.pixabay_key)
 
     print(f"Planned {len(scene_plan)} scenes for prompt '{prompt}'")
 
     for idx, scene in enumerate(scene_plan):
         scene.image_path = working_dir / f"scene_{idx}.png"
         scene.audio_path = working_dir / f"scene_{idx}.mp3"
+        scene.video_path = working_dir / f"scene_{idx}.mp4"
         full_prompt = prompt_builder.build(scene)
-        
-        image_client.generate(full_prompt, scene.image_path)
+        search_term = (scene.search_query or scene.visual_prompt or prompt).strip()
+        if len(search_term) > 100:
+            search_term = search_term[:100]
+        if provider == "stock":
+            try:
+                pixabay_client.generate_video(search_term, scene.video_path, orientation=orientation)
+            except Exception:
+                pixabay_client.generate_image(search_term, scene.image_path)
+        elif provider == "mix":
+            # Generate via Gemini, then try stock as an alternate (keep first success).
+            try:
+                _build_image_client().generate(full_prompt, scene.image_path)
+            except Exception:
+                if pixabay_client:
+                    try:
+                        pixabay_client.generate_video(search_term, scene.video_path, orientation=orientation)
+                    except Exception:
+                        pixabay_client.generate_image(search_term, scene.image_path)
+        else:
+            _build_image_client().generate(full_prompt, scene.image_path)
         tts_client.synthesize(scene.narration, scene.audio_path)
         scene.subtitle = scene.narration
 

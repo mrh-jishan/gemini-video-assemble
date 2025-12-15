@@ -15,6 +15,10 @@ class Settings:
         self.gemini_image_model = os.getenv(
             "GEMINI_IMAGE_MODEL", "imagen-3.0-generate-001"
         )
+        
+        # UI-driven provider selection; default fallback is gemini.
+        self.default_image_provider = "stock"  # gemini | stock | mix (overridden per request)
+        self.pixabay_key = os.getenv("PIXABAY_KEY")  # for stock image search
 
         # Paths
         self.output_dir = Path(os.getenv("OUTPUT_DIR", "renders")).resolve()

@@ -8,6 +8,7 @@ from moviepy import (
     CompositeVideoClip,
     ImageClip,
     TextClip,
+    VideoFileClip,
     concatenate_videoclips,
     vfx,
 )
@@ -35,18 +36,9 @@ class VideoAssembler:
         """Split subtitle text into paced segments to reduce crowding."""
         if not text:
             return []
-        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
-        parts: List[str] = []
-        for sent in sentences:
-            if len(sent) <= 80:
-                if sent:
-                    parts.append(sent)
-                continue
-            wrapped = textwrap.wrap(sent, width=80)
-            if wrapped:
-                parts.append("\n".join(wrapped))
-        if not parts:
-            parts = [text.strip()]
+        words = text.strip().split()
+        max_words = 6
+        parts = [" ".join(words[i:i + max_words]) for i in range(0, len(words), max_words)]
 
         seg_duration = duration / len(parts)
         segments = []
@@ -106,11 +98,17 @@ class VideoAssembler:
         clips = []
 
         for idx, scene in enumerate(scenes):
-            if not scene.image_path or not scene.audio_path:
-                raise RuntimeError("Scene missing assets")
+            if not scene.audio_path:
+                raise RuntimeError("Scene missing audio")
             audio_clip = AudioFileClip(str(scene.audio_path))
             duration = max(scene.duration_sec, audio_clip.duration + 0.2)
-            image_clip = ImageClip(str(scene.image_path)).with_duration(duration)
+
+            if scene.video_path and Path(scene.video_path).exists():
+                image_clip = VideoFileClip(str(scene.video_path)).with_duration(duration)
+            elif scene.image_path and Path(scene.image_path).exists():
+                image_clip = ImageClip(str(scene.image_path)).with_duration(duration)
+            else:
+                raise RuntimeError("Scene missing visual asset")
             if self.target_size:
                 try:
                     image_clip = image_clip.resize(newsize=self.target_size)
@@ -141,7 +139,7 @@ class VideoAssembler:
                 for seg in segments:
                     text_clip = self._create_text_clip(seg["text"], seg["duration"], clip_width)
                     if text_clip:
-                        text_clip = text_clip.with_position(("center", "bottom"))
+                        text_clip = text_clip.with_position(("center", "center"))
                         overlays.append(text_clip.with_start(seg["start"]))
                 if overlays:
                     clip = CompositeVideoClip([clip, *overlays])

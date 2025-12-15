@@ -15,8 +15,9 @@ class ScenePlanner:
         instruction = (
             "You are a film director. Break the topic into short scenes. "
             "Return JSON with a 'scenes' array only. Each scene needs: "
-            "title, narration (2-3 sentences), visual_prompt, and duration_sec "
-            f"(so total is close to {total_duration} seconds)."
+            "title, narration (2-3 sentences), visual_prompt, duration_sec "
+            f"(so total is close to {total_duration} seconds), and search_terms "
+            "(short keyword string <= 5 words for stock image search)."
         )
         
         full_prompt = f"{instruction}\n\nTopic: {prompt}\nTarget scenes: {target_scenes}"
@@ -33,12 +34,14 @@ class ScenePlanner:
                             "narration": {"type": "string"},
                             "visual_prompt": {"type": "string"},
                             "duration_sec": {"type": "number"},
+                            "search_terms": {"type": "string"},
                         },
                         "required": [
                             "title", 
                             "narration", 
                             "visual_prompt", 
-                            "duration_sec"
+                            "duration_sec",
+                            "search_terms"
                         ],
                     },
                 }
@@ -64,12 +67,14 @@ class ScenePlanner:
 
         scenes = []
         for raw in body.get("scenes", []):
+            search_terms = raw.get("search_terms") if isinstance(raw, dict) else None
             scenes.append(
                 Scene(
                     title=raw["title"],
                     narration=raw["narration"],
                     visual_prompt=raw["visual_prompt"],
                     duration_sec=max(3.0, float(raw["duration_sec"])),
+                    search_query=(search_terms.strip() if search_terms else None),
                 )
             )
         if not scenes:

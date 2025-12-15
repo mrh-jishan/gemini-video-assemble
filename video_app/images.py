@@ -1,8 +1,10 @@
 from pathlib import Path
 from io import BytesIO
+from typing import Optional
 from google.genai import types
 from google import genai
 from PIL import Image
+import requests
 
 
 class GeminiImageClient:
@@ -69,3 +71,70 @@ class GeminiImageClient:
             
             dest.write_bytes(image_bytes)
             return dest
+
+
+class PixabayImageClient:
+    """
+    Simple stock image/video fetcher using Pixabay (requires API key).
+    """
+
+    def __init__(self, api_key: str):
+        if not api_key:
+            raise RuntimeError("PIXABAY_KEY required for stock provider")
+        self.api_key = api_key
+        self.image_url = "https://pixabay.com/api/"
+        self.video_url = "https://pixabay.com/api/videos/"
+
+    def _fetch(self, url: str, params: dict, dest: Path) -> Path:
+        resp = requests.get(url, params=params, timeout=60)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Pixabay failed ({resp.status_code}): {resp.text}")
+        data = resp.json()
+        return data
+
+    def generate_image(self, prompt: str, dest: Path) -> Path:
+        params = {
+            "key": self.api_key,
+            "q": prompt,
+            "image_type": "photo",
+            "orientation": "horizontal",
+            "safesearch": "true",
+            "per_page": 5,
+        }
+        data = self._fetch(self.image_url, params, dest)
+        hits = data.get("hits", [])
+        if not hits:
+            raise RuntimeError("Pixabay returned no images")
+        image_url = hits[0].get("largeImageURL") or hits[0].get("webformatURL")
+        if not image_url:
+            raise RuntimeError("Pixabay hit missing image URL")
+        img_resp = requests.get(image_url, timeout=60)
+        if img_resp.status_code != 200:
+            raise RuntimeError(f"Pixabay image download failed ({img_resp.status_code})")
+        dest.write_bytes(img_resp.content)
+        return dest
+
+    def generate_video(self, search_term: str, dest: Path, orientation: str = "horizontal") -> Path:
+        params = {
+            "key": self.api_key,
+            "q": search_term,
+            "video_type": "all",
+            "safesearch": "true",
+            "per_page": 5,
+        }
+        data = self._fetch(self.video_url, params, dest)
+        hits = data.get("hits", [])
+        if not hits:
+            raise RuntimeError("Pixabay returned no videos")
+        hit = hits[0]
+        videos = hit.get("videos") or {}
+        # Prefer orientation-appropriate resolution.
+        candidate = videos.get("medium") or videos.get("large") or videos.get("small")
+        if not candidate or not candidate.get("url"):
+            raise RuntimeError("Pixabay video payload missing URL")
+        url = candidate["url"]
+        v_resp = requests.get(url, timeout=120)
+        if v_resp.status_code != 200:
+            raise RuntimeError(f"Pixabay video download failed ({v_resp.status_code})")
+        dest.write_bytes(v_resp.content)
+        return dest
