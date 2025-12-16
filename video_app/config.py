@@ -43,12 +43,12 @@ class Settings:
         self.default_aspect = os.getenv("VIDEO_ASPECT", "horizontal")  # horizontal | vertical
         # Target sizes for horizontal (16:9) and vertical (9:16).
         self.horizontal_size = (
-            int(os.getenv("HORIZONTAL_WIDTH", "1280")),
-            int(os.getenv("HORIZONTAL_HEIGHT", "720")),
+            int(os.getenv("HORIZONTAL_WIDTH", "1920")),
+            int(os.getenv("HORIZONTAL_HEIGHT", "1080")),
         )
         self.vertical_size = (
-            int(os.getenv("VERTICAL_WIDTH", "720")),
-            int(os.getenv("VERTICAL_HEIGHT", "1280")),
+            int(os.getenv("VERTICAL_WIDTH", "1080")),
+            int(os.getenv("VERTICAL_HEIGHT", "1920")),
         )
 
         self.port = int(os.getenv("PORT", "5000"))

@@ -123,7 +123,7 @@ class VideoAssembler:
             if not scene.audio_path:
                 raise RuntimeError("Scene missing audio")
             audio_clip = AudioFileClip(str(scene.audio_path))
-            duration = max(scene.duration_sec, audio_clip.duration + 0.2)
+            duration = audio_clip.duration
 
             if scene.video_path and Path(scene.video_path).exists():
                 image_clip = VideoFileClip(str(scene.video_path)).with_duration(duration)
@@ -173,9 +173,10 @@ class VideoAssembler:
             fps=self.fps,
             codec="libx264",
             audio_codec="aac",
-            bitrate="4000k",
+            bitrate="8000k",
             threads=4,
             temp_audiofile=str(output_path.with_suffix(".temp-audio.m4a")),
             remove_temp=True,
+            preset="slow",
         )
         return output_path

@@ -60,13 +60,14 @@ def build_video_from_prompt(
     scene_plan = scene_planner.plan(prompt, duration, scenes)
     aspect_choice = aspect or settings.default_aspect
     assembler = _build_assembler(aspect_choice)
-    # Select image provider: gemini (default), stock, or mix (from UI).
+    # Select image provider: gemini (default) or stock (from UI).
     provider = (image_provider or settings.default_image_provider).lower()
     target_size = _aspect_to_size(aspect_choice)
+    orientation = "vertical" if aspect_choice == "vertical" else "horizontal"
     pixabay_client = None
-    if provider in ("stock", "mix"):
+    if provider == "stock":
         if not settings.pixabay_key:
-            raise RuntimeError("PIXABAY_KEY required for stock/mix provider")
+            raise RuntimeError("PIXABAY_KEY required for stock provider")
         pixabay_client = PixabayImageClient(settings.pixabay_key)
 
     print(f"Planned {len(scene_plan)} scenes for prompt '{prompt}'")
@@ -83,17 +84,7 @@ def build_video_from_prompt(
             try:
                 pixabay_client.generate_video(search_term, scene.video_path, target_size=target_size)
             except Exception:
-                pixabay_client.generate_image(search_term, scene.image_path)
-        elif provider == "mix":
-            # Generate via Gemini, then try stock as an alternate (keep first success).
-            try:
-                _build_image_client().generate(full_prompt, scene.image_path)
-            except Exception:
-                if pixabay_client:
-                    try:
-                        pixabay_client.generate_video(search_term, scene.video_path, target_size=target_size)
-                    except Exception:
-                        pixabay_client.generate_image(search_term, scene.image_path)
+                pixabay_client.generate_image(search_term, scene.image_path, orientation=orientation)
         else:
             _build_image_client().generate(full_prompt, scene.image_path)
         tts_client.synthesize(scene.narration, scene.audio_path)

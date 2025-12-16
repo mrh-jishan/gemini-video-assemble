@@ -117,7 +117,7 @@
         </div>
         <div>
           <label for="scenes">Scenes</label>
-          <input id="scenes" name="scenes" type="number" min="2" max="12" value="{{ scenes }}">
+          <input id="scenes" name="scenes" type="number" min="2" max="25" value="{{ scenes }}">
         </div>
         <div>
           <label for="aspect">Aspect</label>
@@ -131,7 +131,6 @@
           <select id="image_provider" name="image_provider">
             <option value="gemini" {% if image_provider == 'gemini' %}selected{% endif %}>Gemini generate</option>
             <option value="stock" {% if image_provider == 'stock' %}selected{% endif %}>Stock search (Pixabay)</option>
-            <option value="mix" {% if image_provider == 'mix' %}selected{% endif %}>Mix (Gemini + stock fallback)</option>
           </select>
         </div>
       </div>

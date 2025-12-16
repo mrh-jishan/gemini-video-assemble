@@ -92,19 +92,22 @@ class PixabayImageClient:
         data = resp.json()
         return data
 
-    def generate_image(self, prompt: str, dest: Path) -> Path:
+    def generate_image(self, prompt: str, dest: Path, orientation: str = "horizontal") -> Path:
         params = {
             "key": self.api_key,
             "q": prompt,
             "image_type": "photo",
-            "orientation": "horizontal",
+            "orientation": orientation,
             "safesearch": "true",
-            "per_page": 5,
+            "per_page": 10,
+            "min_width": 1920 if orientation == "horizontal" else 1080,
+            "min_height": 1080 if orientation == "horizontal" else 1920,
         }
         data = self._fetch(self.image_url, params, dest)
         hits = data.get("hits", [])
         if not hits:
             raise RuntimeError("Pixabay returned no images")
+        # Prioritize highest resolution available (largeImageURL is typically 1920px wide)
         image_url = hits[0].get("largeImageURL") or hits[0].get("webformatURL")
         if not image_url:
             raise RuntimeError("Pixabay hit missing image URL")
@@ -121,6 +124,8 @@ class PixabayImageClient:
             "video_type": "all",
             "safesearch": "true",
             "per_page": 5,
+            "min_width": 1920,
+            "min_height": 1080,
         }
         data = self._fetch(self.video_url, params, dest)
         hits = data.get("hits", [])
@@ -129,13 +134,15 @@ class PixabayImageClient:
         hit = hits[0]
         videos = hit.get("videos") or {}
         candidates = []
+        # Prioritize large/medium for 1080p output
         for key in ("large", "medium", "small", "tiny"):
             entry = videos.get(key)
             if entry and entry.get("url"):
                 candidates.append(entry)
         if not candidates:
             raise RuntimeError("Pixabay video payload missing URL")
-        target_w = target_size[0] if target_size else 0
+        target_w = target_size[0] if target_size else 1920
+        # Prefer larger videos for better quality, but match target if possible
         candidate = sorted(
             candidates,
             key=lambda e: abs((e.get("width") or target_w) - target_w),
