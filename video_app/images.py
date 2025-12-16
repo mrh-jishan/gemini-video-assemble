@@ -92,6 +92,46 @@ class PixabayImageClient:
         data = resp.json()
         return data
 
+    def _download_image_with_validation(self, image_url: str, dest: Path) -> Path:
+        """Download image with validation to ensure file integrity."""
+        img_resp = requests.get(image_url, timeout=60)
+        if img_resp.status_code != 200:
+            raise RuntimeError(f"Pixabay image download failed ({img_resp.status_code})")
+        if not img_resp.content or len(img_resp.content) < 1000:
+            raise RuntimeError("Pixabay image download incomplete or corrupted")
+        dest.write_bytes(img_resp.content)
+        return dest
+
+    def _download_video_with_fallback(self, candidates: list, dest: Path) -> Path:
+        """Download video with fallback to smaller formats if larger ones fail."""
+        last_error = None
+        for candidate in candidates:
+            try:
+                url = candidate.get("url")
+                if not url:
+                    continue
+                print(f"Attempting to download video from {url}")
+                v_resp = requests.get(url, timeout=120, stream=True)
+                if v_resp.status_code != 200:
+                    last_error = f"HTTP {v_resp.status_code}"
+                    continue
+                
+                # Write content and validate file size
+                content = v_resp.content
+                if not content or len(content) < 100000:  # At least 100KB
+                    last_error = f"Downloaded file too small ({len(content)} bytes)"
+                    continue
+                
+                dest.write_bytes(content)
+                print(f"Successfully downloaded video ({len(content)} bytes)")
+                return dest
+            except Exception as e:
+                last_error = str(e)
+                print(f"Failed to download video: {e}")
+                continue
+        
+        raise RuntimeError(f"All video download attempts failed. Last error: {last_error}")
+
     def generate_image(self, prompt: str, dest: Path, orientation: str = "horizontal") -> Path:
         params = {
             "key": self.api_key,
@@ -111,11 +151,7 @@ class PixabayImageClient:
         image_url = hits[0].get("largeImageURL") or hits[0].get("webformatURL")
         if not image_url:
             raise RuntimeError("Pixabay hit missing image URL")
-        img_resp = requests.get(image_url, timeout=60)
-        if img_resp.status_code != 200:
-            raise RuntimeError(f"Pixabay image download failed ({img_resp.status_code})")
-        dest.write_bytes(img_resp.content)
-        return dest
+        return self._download_image_with_validation(image_url, dest)
 
     def generate_video(self, search_term: str, dest: Path, target_size: tuple[int, int]) -> Path:
         params = {
@@ -134,22 +170,19 @@ class PixabayImageClient:
         hit = hits[0]
         videos = hit.get("videos") or {}
         candidates = []
-        # Prioritize large/medium for 1080p output
+        # Prioritize large/medium for 1080p output, build fallback chain
         for key in ("large", "medium", "small", "tiny"):
             entry = videos.get(key)
             if entry and entry.get("url"):
                 candidates.append(entry)
         if not candidates:
             raise RuntimeError("Pixabay video payload missing URL")
+        
         target_w = target_size[0] if target_size else 1920
-        # Prefer larger videos for better quality, but match target if possible
-        candidate = sorted(
+        # Sort by closest to target width, keeping all as fallback chain
+        sorted_candidates = sorted(
             candidates,
             key=lambda e: abs((e.get("width") or target_w) - target_w),
-        )[0]
-        url = candidate["url"]
-        v_resp = requests.get(url, timeout=120)
-        if v_resp.status_code != 200:
-            raise RuntimeError(f"Pixabay video download failed ({v_resp.status_code})")
-        dest.write_bytes(v_resp.content)
-        return dest
+        )
+        
+        return self._download_video_with_fallback(sorted_candidates, dest)

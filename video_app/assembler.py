@@ -48,13 +48,31 @@ class VideoAssembler:
             cursor += seg_duration
         return segments
 
-    def _create_text_clip(self, text: str, duration: float, box_width: Optional[int]):
-        """
-        Tries to create a TextClip with the user's font.
-        If that fails, falls back to common system fonts to prevent crashing.
-        """
-        # 1. List of fonts to try in order
-        #    Priority: User's config -> Arial (Win) -> Helvetica (Mac) -> DejaVu (Linux)
+    def _get_subtitle_fontsize(self) -> int:
+        """Calculate font size based on aspect ratio (horizontal vs vertical)."""
+        if not self.target_size:
+            return self.subtitle_opts.get("fontsize", 40)
+        
+        width, height = self.target_size
+        # For horizontal (16:9 - 1920x1080): larger font
+        # For vertical (9:16 - 1080x1920): smaller font
+        if width > height:  # Horizontal aspect ratio
+            return self.subtitle_opts.get("fontsize", 50)
+        else:  # Vertical aspect ratio
+            return self.subtitle_opts.get("fontsize", 32)
+
+    def _get_interactive_fontsize(self, index: int, total: int) -> int:
+        """Get varied font size for each segment to create visual interest."""
+        base_size = self._get_subtitle_fontsize()
+        # Alternate between large and normal sizes for emphasis
+        if index % 2 == 0:
+            return int(base_size * 1.2)  # Larger (emphasized)
+        else:
+            return int(base_size * 0.85)  # Smaller (supporting)
+
+    def _create_text_clip(self, text: str, duration: float, box_width: Optional[int], fontsize: Optional[int] = None):
+        """Create a TextClip with font size adjusted for aspect ratio."""
+        # List of fonts to try in order
         fonts_to_try = [
             self.subtitle_opts.get("font"),  # Try user input first
             "Arial.ttf",                     # Standard Windows
@@ -66,7 +84,10 @@ class VideoAssembler:
         
         # Remove None values and duplicates
         fonts_to_try = list(dict.fromkeys([f for f in fonts_to_try if f]))
-
+        
+        # Get font size (use provided or default)
+        if fontsize is None:
+            fontsize = self._get_subtitle_fontsize()
         last_error = None
 
         for font_name in fonts_to_try:
@@ -74,7 +95,7 @@ class VideoAssembler:
                 clip = TextClip(
                     text=text,
                     font=font_name,
-                    font_size=self.subtitle_opts.get("fontsize", 40),
+                    font_size=fontsize,
                     color=self.subtitle_opts.get("color", "white"),
                     stroke_color=self.subtitle_opts.get("stroke_color", "black"),
                     stroke_width=self.subtitle_opts.get("stroke_width", 1),
@@ -154,10 +175,27 @@ class VideoAssembler:
 
                 segments = self._subtitle_segments(scene.subtitle, duration)
                 overlays = []
-                for seg in segments:
-                    text_clip = self._create_text_clip(seg["text"], seg["duration"], clip_width)
+                for idx, seg in enumerate(segments):
+                    # Get interactive font size (varies by segment index)
+                    interactive_fontsize = self._get_interactive_fontsize(idx, len(segments))
+                    text_clip = self._create_text_clip(seg["text"], seg["duration"], clip_width, fontsize=interactive_fontsize)
                     if text_clip:
-                        text_clip = text_clip.with_position(("center", "center"))
+                        # Add pop-in animation (scale from 0.5 to 1.0 in first 0.2 seconds)
+                        pop_duration = min(0.2, seg["duration"] * 0.3)
+                        text_clip = text_clip.with_position(("center", 80))
+                        
+                        # Apply pop-in effect with scale animation
+                        def make_pop_animation(pop_dur, full_dur):
+                            def anim(t):
+                                if t < pop_dur:
+                                    return 0.5 + 0.5 * (t / pop_dur)  # Scale from 0.5 to 1.0
+                                return 1.0
+                            return anim
+                        
+                        text_clip = text_clip.resized(make_pop_animation(pop_duration, seg["duration"]))
+                        # Add fade out at the end
+                        if seg["duration"] > 0.3:
+                            text_clip = text_clip.with_effects([vfx.FadeOut(0.2)])
                         overlays.append(text_clip.with_start(seg["start"]))
                 if overlays:
                     clip = CompositeVideoClip([clip, *overlays])
