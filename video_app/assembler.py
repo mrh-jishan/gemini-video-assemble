@@ -221,7 +221,7 @@ class VideoAssembler:
                     interactive_fontsize = self._get_interactive_fontsize(idx, len(segments))
                     text_clip = self._create_text_clip(seg["text"], seg["duration"], clip_width, fontsize=interactive_fontsize)
                     if text_clip:
-                        text_clip = text_clip.with_position(("center", 80))
+                        text_clip = text_clip.with_position(("center", "center"))
                         
                         # Apply different effects based on segment index for variety
                         effect_type = idx % 4  # Cycle through 4 different effects
