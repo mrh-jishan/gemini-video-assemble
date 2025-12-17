@@ -76,6 +76,7 @@ class ScenePlanner:
             search_terms = raw.get("search_terms") if isinstance(raw, dict) else None
             music_keywords = raw.get("music_keywords") if isinstance(raw, dict) else None
             sfx_keywords = raw.get("sfx_keywords") if isinstance(raw, dict) else None
+            print(f"[Planner] Scene parsed - music_keywords: '{music_keywords}', sfx_keywords: '{sfx_keywords}'")
             scenes.append(
                 Scene(
                     title=raw["title"],

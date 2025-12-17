@@ -180,6 +180,7 @@ class VideoAssembler:
     
     def build(self, scenes: List[Scene], output_path: Path) -> Path:
         print(f"Building video at {output_path} with {len(scenes)} scenes")
+        print(f"[Assembler] Background music path provided: {self.background_music_path}")
         clips = []
 
         for idx, scene in enumerate(scenes):
@@ -261,27 +262,39 @@ class VideoAssembler:
         # Mix background music if provided
         if self.background_music_path and self.background_music_path.exists():
             try:
+                print(f"[Background Music] Loading from: {self.background_music_path}")
                 bg_audio = AudioFileClip(str(self.background_music_path))
+                print(f"[Background Music] Duration: {bg_audio.duration}s, Video duration: {final.duration}s")
+                
                 # Get the final video duration
                 video_duration = final.duration
                 # Loop background music if needed to match video duration
                 if bg_audio.duration < video_duration:
                     num_loops = int(video_duration / bg_audio.duration) + 1
+                    print(f"[Background Music] Looping {num_loops} times to cover video duration")
                     bg_audio = concatenate_audioclips([bg_audio] * num_loops)
                 
                 # Trim to exact video duration
-                bg_audio = bg_audio.subclipped(0, video_duration)
+                bg_audio = bg_audio.subclip(0, video_duration)
+                print(f"[Background Music] Trimmed to {bg_audio.duration}s")
 
                 # Mix background audio at lower volume (30%) with main audio (70%)
                 bg_audio = bg_audio.with_effects([afx.MultiplyVolume(0.3)])
+                print(f"[Background Music] Volume reduced to 30%")
 
                 main_audio = final.audio
                 if main_audio:
+                    print(f"[Background Music] Compositing with main audio track")
                     # Composite the audio tracks
                     final_audio = CompositeAudioClip([main_audio, bg_audio])
                     final = final.with_audio(final_audio)
+                    print(f"[Background Music] Successfully mixed background music")
+                else:
+                    print(f"[Background Music] Warning: No main audio track found")
             except Exception as e:
                 print(f"Warning: Failed to add background music: {e}")
+        else:
+            print(f"[Background Music] No background music path provided or file not found")
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
         final.write_videofile(

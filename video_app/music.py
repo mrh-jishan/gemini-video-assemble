@@ -56,23 +56,35 @@ class FreesoundClient:
 
     def generate_background_music(self, search_term: str, dest: Path) -> Path:
         """Download background music or ambient sound from Freesound."""
+        # Simplify search term: take first word or use common fallback
+        simplified_term = search_term.split(",")[0].strip() if "," in search_term else search_term.strip()
+        if not simplified_term or len(simplified_term) < 2:
+            simplified_term = "ambient"
+        
         params = {
-            "query": f"{search_term} ambient OR background OR music",
+            "query": f"{simplified_term}",
             "filter": "duration:[10 TO 600]",  # 10 seconds to 10 minutes
             "sort": "rating_desc",
-            "page_size": 5,
+            "page_size": 10,
             "fields": "id,name,previews,download"
         }
         # High-level log before request
         try:
-            print(f"[Freesound] Searching background music for query='{search_term}' with params={params}")
+            print(f"[Freesound] Searching background music for query='{search_term}' (simplified: '{simplified_term}') with params={params}")
         except Exception:
             pass
         data = self._fetch(params)
         results = data.get("results", [])
         print(f"[Freesound] Background music results: {len(results)} found")
         if not results:
-            raise RuntimeError("Freesound returned no background music")
+            # Fallback: try a simpler search
+            print(f"[Freesound] No results for '{simplified_term}', trying fallback search with 'ambient'")
+            params["query"] = "ambient"
+            data = self._fetch(params)
+            results = data.get("results", [])
+            print(f"[Freesound] Fallback results: {len(results)} found")
+            if not results:
+                raise RuntimeError("Freesound returned no background music")
         
         # Collect download URLs from top results
         candidates = []

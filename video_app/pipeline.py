@@ -70,11 +70,13 @@ def build_video_from_prompt(
     # Try to download background music if Freesound is available (Gemini-only keywords)
     background_music_path = None
     if settings.freesound_key:
+        print("[Music] Freesound key available, attempting to get background music...")
         try:
             freesound_client = FreesoundClient(settings.freesound_key)
             # Use the first scene's music keywords as the overall music mood
             music_query = None
-            for scene in scene_plan:
+            for idx, scene in enumerate(scene_plan):
+                print(f"[Music] Scene {idx}: music_keywords = '{scene.music_keywords}'")
                 if scene.music_keywords:
                     music_query = scene.music_keywords
                     break
@@ -82,10 +84,14 @@ def build_video_from_prompt(
                 print(f"[Music] Using planner keywords for Freesound: '{music_query}'")
                 background_music_path = working_dir / "background_music.mp3"
                 freesound_client.generate_background_music(music_query, background_music_path)
+                print(f"[Music] Background music saved to: {background_music_path}")
+                print(f"[Music] File exists: {background_music_path.exists()}, Size: {background_music_path.stat().st_size if background_music_path.exists() else 'N/A'} bytes")
             else:
-                print("[Music] No planner-provided music keywords; skipping background music.")
+                print("[Music] No planner-provided music keywords found in any scene; skipping background music.")
         except Exception as e:
             print(f"Warning: Could not get background music: {e}")
+    else:
+        print("[Music] FREESOUND_KEY not set; skipping background music.")
     
     assembler = _build_assembler(aspect_choice, background_music_path)
     # Select image provider: gemini (default) or stock (from UI).
