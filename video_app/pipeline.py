@@ -1,3 +1,4 @@
+import re
 import shutil
 import tempfile
 import uuid
@@ -10,7 +11,7 @@ from .assembler import VideoAssembler
 from .config import Settings
 from .images import GeminiImageClient, PixabayImageClient
 from .media import PixabayVideoClient
-from .music import PixabayMusicClient
+from .music import FreesoundClient
 from .models import Scene
 from .planner import PromptBuilder, ScenePlanner
 from .tts import GoogleTTSSynthesizer
@@ -29,6 +30,8 @@ def _build_image_client():
 
 
 tts_client = GoogleTTSSynthesizer(settings.tts_lang)
+
+
 def _aspect_to_size(aspect: str) -> tuple[int, int]:
     if aspect == "vertical":
         return settings.vertical_size
@@ -64,13 +67,23 @@ def build_video_from_prompt(
     scene_plan = scene_planner.plan(prompt, duration, scenes)
     aspect_choice = aspect or settings.default_aspect
     
-    # Try to download background music if Pixabay is available
+    # Try to download background music if Freesound is available (Gemini-only keywords)
     background_music_path = None
-    if settings.pixabay_key:
+    if settings.freesound_key:
         try:
-            pixabay_music = PixabayMusicClient(settings.pixabay_key)
-            background_music_path = working_dir / "background_music.mp3"
-            pixabay_music.generate_background_music(prompt[:50], background_music_path)  # Use first 50 chars of prompt
+            freesound_client = FreesoundClient(settings.freesound_key)
+            # Use the first scene's music keywords as the overall music mood
+            music_query = None
+            for scene in scene_plan:
+                if scene.music_keywords:
+                    music_query = scene.music_keywords
+                    break
+            if music_query:
+                print(f"[Music] Using planner keywords for Freesound: '{music_query}'")
+                background_music_path = working_dir / "background_music.mp3"
+                freesound_client.generate_background_music(music_query, background_music_path)
+            else:
+                print("[Music] No planner-provided music keywords; skipping background music.")
         except Exception as e:
             print(f"Warning: Could not get background music: {e}")
     
@@ -88,12 +101,17 @@ def build_video_from_prompt(
         pixabay_image_client = PixabayImageClient(settings.pixabay_key)
         pixabay_video_client = PixabayVideoClient(settings.pixabay_key)
 
+    freesound_client = None
+    if settings.freesound_key:
+        freesound_client = FreesoundClient(settings.freesound_key)
+
     print(f"Planned {len(scene_plan)} scenes for prompt '{prompt}'")
 
     for idx, scene in enumerate(scene_plan):
         scene.image_path = working_dir / f"scene_{idx}.png"
         scene.audio_path = working_dir / f"scene_{idx}.mp3"
         scene.video_path = working_dir / f"scene_{idx}.mp4"
+        scene.sfx_path = working_dir / f"scene_{idx}_sfx.mp3"
         full_prompt = prompt_builder.build(scene)
         search_term = (scene.search_query or scene.visual_prompt or prompt).strip()
         if len(search_term) > 100:
@@ -107,6 +125,15 @@ def build_video_from_prompt(
             _build_image_client().generate(full_prompt, scene.image_path)
         tts_client.synthesize(scene.narration, scene.audio_path)
         scene.subtitle = scene.narration
+        
+        # Generate per-scene sound effects if available
+        if freesound_client and scene.sfx_keywords:
+            try:
+                print(f"[SFX] Fetching sound effect for scene {idx}: '{scene.sfx_keywords}'")
+                freesound_client.generate_sound_effect(scene.sfx_keywords, scene.sfx_path)
+            except Exception as e:
+                print(f"[SFX] Warning: Could not get SFX for scene {idx}: {e}")
+                scene.sfx_path = None
 
     output_path = settings.output_dir / f"{uuid.uuid4()}.mp4"
     assembler.build(scene_plan, output_path)

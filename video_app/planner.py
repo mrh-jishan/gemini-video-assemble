@@ -16,8 +16,10 @@ class ScenePlanner:
             "You are a film director. Break the topic into short scenes. "
             "Return JSON with a 'scenes' array only. Each scene needs: "
             "title, narration (2-3 sentences), visual_prompt, duration_sec "
-            f"(so total is close to {total_duration} seconds), and search_terms "
-            "(short keyword string <= 5 words for stock image search)."
+            f"(so total is close to {total_duration} seconds), search_terms "
+            "(short keyword string <= 5 words for stock image search), "
+            "music_keywords (short keyword string <= 6 words describing the background music mood/genre, e.g., 'ambient cinematic soft'), and "
+            "sfx_keywords (short keyword string <= 3 words for a scene-specific sound effect relevant to the scene content, e.g., 'wind howling' or 'door opening')."
         )
         
         full_prompt = f"{instruction}\n\nTopic: {prompt}\nTarget scenes: {target_scenes}"
@@ -35,13 +37,17 @@ class ScenePlanner:
                             "visual_prompt": {"type": "string"},
                             "duration_sec": {"type": "number"},
                             "search_terms": {"type": "string"},
+                            "music_keywords": {"type": "string"},
+                            "sfx_keywords": {"type": "string"},
                         },
                         "required": [
                             "title", 
                             "narration", 
                             "visual_prompt", 
                             "duration_sec",
-                            "search_terms"
+                            "search_terms",
+                            "music_keywords",
+                            "sfx_keywords"
                         ],
                     },
                 }
@@ -68,6 +74,8 @@ class ScenePlanner:
         scenes = []
         for raw in body.get("scenes", []):
             search_terms = raw.get("search_terms") if isinstance(raw, dict) else None
+            music_keywords = raw.get("music_keywords") if isinstance(raw, dict) else None
+            sfx_keywords = raw.get("sfx_keywords") if isinstance(raw, dict) else None
             scenes.append(
                 Scene(
                     title=raw["title"],
@@ -75,6 +83,8 @@ class ScenePlanner:
                     visual_prompt=raw["visual_prompt"],
                     duration_sec=max(3.0, float(raw["duration_sec"])),
                     search_query=(search_terms.strip() if search_terms else None),
+                    music_keywords=(music_keywords.strip() if music_keywords else None),
+                    sfx_keywords=(sfx_keywords.strip() if sfx_keywords else None),
                 )
             )
         if not scenes:

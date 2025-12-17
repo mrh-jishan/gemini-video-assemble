@@ -13,6 +13,7 @@ from moviepy import (
     concatenate_videoclips,
     concatenate_audioclips,
     vfx,
+    afx,
 )
 import platform
 from .models import Scene
@@ -199,6 +200,21 @@ class VideoAssembler:
                     lambda t: 1 + (self.kenburns_zoom * (t / duration))
                 )
             clip = image_clip.with_audio(audio_clip)
+            
+            # Mix in per-scene sound effects if available
+            if scene.sfx_path and Path(scene.sfx_path).exists():
+                try:
+                    sfx_audio = AudioFileClip(str(scene.sfx_path))
+                    sfx_audio = sfx_audio.with_duration(duration)
+                    # Reduce SFX volume to 40% so it blends with narration
+                    sfx_audio = sfx_audio.with_effects([afx.MultiplyVolume(0.4)])
+                    # sfx_audio = sfx_audio.multiply_volume(0.4)
+                    # Composite narration + SFX
+                    scene_audio = CompositeAudioClip([audio_clip, sfx_audio])
+                    clip = clip.with_audio(scene_audio)
+                except Exception as e:
+                    print(f"Warning: Failed to add SFX to scene: {e}")
+            
             if self.enable_subtitles and scene.subtitle:
                 # Derive a width that keeps subtitles within frame bounds.
                 clip_width = None
@@ -250,10 +266,12 @@ class VideoAssembler:
                 bg_audio = bg_audio.with_duration(video_duration)
 
                 # Mix background audio at lower volume (30%) with main audio (70%)
+                bg_audio = bg_audio.with_effects([afx.MultiplyVolume(0.3)])
+
                 main_audio = final.audio
                 if main_audio:
                     # Reduce background music to 30% volume
-                    bg_audio = bg_audio.multiply_volume(0.3)
+                    # bg_audio = bg_audio.multiply_volume(0.3)
                     # Composite the audio tracks
                     final_audio = CompositeAudioClip([main_audio, bg_audio])
                     final = final.with_audio(final_audio)

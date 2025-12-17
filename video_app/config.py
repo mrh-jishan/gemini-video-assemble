@@ -19,6 +19,7 @@ class Settings:
         # UI-driven provider selection; default fallback is gemini.
         self.default_image_provider = "stock"  # gemini | stock | mix (overridden per request)
         self.pixabay_key = os.getenv("PIXABAY_KEY")  # for stock image search
+        self.freesound_key = os.getenv("FREESOUND_KEY")  # for background music/sound effects
 
         # Paths
         self.output_dir = Path(os.getenv("OUTPUT_DIR", "renders")).resolve()
