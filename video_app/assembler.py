@@ -205,10 +205,16 @@ class VideoAssembler:
             if scene.sfx_path and Path(scene.sfx_path).exists():
                 try:
                     sfx_audio = AudioFileClip(str(scene.sfx_path))
-                    sfx_audio = sfx_audio.with_duration(duration)
+                    # Trim or loop SFX to match scene duration
+                    if sfx_audio.duration > duration:
+                        # Trim to scene duration
+                        sfx_audio = sfx_audio.subclipped(0, duration)
+                    elif sfx_audio.duration < duration:
+                        # Loop the SFX to fill the scene duration
+                        num_loops = int(duration / sfx_audio.duration) + 1
+                        sfx_audio = concatenate_audioclips([sfx_audio] * num_loops).subclipped(0, duration)
                     # Reduce SFX volume to 40% so it blends with narration
                     sfx_audio = sfx_audio.with_effects([afx.MultiplyVolume(0.4)])
-                    # sfx_audio = sfx_audio.multiply_volume(0.4)
                     # Composite narration + SFX
                     scene_audio = CompositeAudioClip([audio_clip, sfx_audio])
                     clip = clip.with_audio(scene_audio)
@@ -263,15 +269,14 @@ class VideoAssembler:
                     num_loops = int(video_duration / bg_audio.duration) + 1
                     bg_audio = concatenate_audioclips([bg_audio] * num_loops)
                 
-                bg_audio = bg_audio.with_duration(video_duration)
+                # Trim to exact video duration
+                bg_audio = bg_audio.subclipped(0, video_duration)
 
                 # Mix background audio at lower volume (30%) with main audio (70%)
                 bg_audio = bg_audio.with_effects([afx.MultiplyVolume(0.3)])
 
                 main_audio = final.audio
                 if main_audio:
-                    # Reduce background music to 30% volume
-                    # bg_audio = bg_audio.multiply_volume(0.3)
                     # Composite the audio tracks
                     final_audio = CompositeAudioClip([main_audio, bg_audio])
                     final = final.with_audio(final_audio)
