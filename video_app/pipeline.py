@@ -69,7 +69,7 @@ def build_video_from_prompt(
     if settings.pixabay_key:
         try:
             pixabay_music = PixabayMusicClient(settings.pixabay_key)
-            background_music_path = working_dir / "background_music.mp4"
+            background_music_path = working_dir / "background_music.mp3"
             pixabay_music.generate_background_music(prompt[:50], background_music_path)  # Use first 50 chars of prompt
         except Exception as e:
             print(f"Warning: Could not get background music: {e}")
