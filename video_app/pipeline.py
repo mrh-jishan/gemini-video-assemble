@@ -2,12 +2,15 @@ import shutil
 import tempfile
 import uuid
 from pathlib import Path
+from typing import Optional
 
 from google import genai
 
 from .assembler import VideoAssembler
 from .config import Settings
 from .images import GeminiImageClient, PixabayImageClient
+from .media import PixabayVideoClient
+from .music import PixabayMusicClient
 from .models import Scene
 from .planner import PromptBuilder, ScenePlanner
 from .tts import GoogleTTSSynthesizer
@@ -32,7 +35,7 @@ def _aspect_to_size(aspect: str) -> tuple[int, int]:
     return settings.horizontal_size
 
 
-def _build_assembler(aspect: str) -> VideoAssembler:
+def _build_assembler(aspect: str, background_music_path: Optional[Path] = None) -> VideoAssembler:
     target_size = _aspect_to_size(aspect)
     return VideoAssembler(
         crossfade_sec=settings.crossfade_sec,
@@ -46,6 +49,7 @@ def _build_assembler(aspect: str) -> VideoAssembler:
             "stroke_width": settings.subtitle_stroke_width,
             "target_size": target_size,
         },
+        background_music_path=background_music_path,
     )
 
 
@@ -59,16 +63,30 @@ def build_video_from_prompt(
     working_dir = Path(tempfile.mkdtemp(prefix="video-job-"))
     scene_plan = scene_planner.plan(prompt, duration, scenes)
     aspect_choice = aspect or settings.default_aspect
-    assembler = _build_assembler(aspect_choice)
+    
+    # Try to download background music if Pixabay is available
+    background_music_path = None
+    if settings.pixabay_key:
+        try:
+            pixabay_music = PixabayMusicClient(settings.pixabay_key)
+            background_music_path = working_dir / "background_music.mp4"
+            pixabay_music.generate_background_music(prompt[:50], background_music_path)  # Use first 50 chars of prompt
+        except Exception as e:
+            print(f"Warning: Could not get background music: {e}")
+    
+    assembler = _build_assembler(aspect_choice, background_music_path)
     # Select image provider: gemini (default) or stock (from UI).
     provider = (image_provider or settings.default_image_provider).lower()
     target_size = _aspect_to_size(aspect_choice)
     orientation = "vertical" if aspect_choice == "vertical" else "horizontal"
-    pixabay_client = None
+    
+    pixabay_image_client = None
+    pixabay_video_client = None
     if provider == "stock":
         if not settings.pixabay_key:
             raise RuntimeError("PIXABAY_KEY required for stock provider")
-        pixabay_client = PixabayImageClient(settings.pixabay_key)
+        pixabay_image_client = PixabayImageClient(settings.pixabay_key)
+        pixabay_video_client = PixabayVideoClient(settings.pixabay_key)
 
     print(f"Planned {len(scene_plan)} scenes for prompt '{prompt}'")
 
@@ -82,9 +100,9 @@ def build_video_from_prompt(
             search_term = search_term[:100]
         if provider == "stock":
             try:
-                pixabay_client.generate_video(search_term, scene.video_path, target_size=target_size)
+                pixabay_video_client.generate_video(search_term, scene.video_path, target_size=target_size)
             except Exception:
-                pixabay_client.generate_image(search_term, scene.image_path, orientation=orientation)
+                pixabay_image_client.generate_image(search_term, scene.image_path, orientation=orientation)
         else:
             _build_image_client().generate(full_prompt, scene.image_path)
         tts_client.synthesize(scene.narration, scene.audio_path)
