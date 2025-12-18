@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+  <style>
+    .history-shell { background: linear-gradient(135deg, rgba(17,24,39,0.9), rgba(15,23,42,0.9)); border: 1px solid rgba(34, 211, 238, 0.2); border-radius: 16px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.01em; font-weight: 700; }
+    .desc { margin: 0 0 24px; color: #94a3b8; font-size: 16px; }
+    .run-list { display: grid; gap: 12px; }
+    .run-card { padding: 16px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(11,18,34,0.6); transition: all 0.2s ease; }
+    .run-card:hover { border-color: rgba(34,211,238,0.3); background: rgba(11,18,34,0.9); }
+    .run-header { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+    .run-meta { font-size: 14px; color: #94a3b8; }
+    .run-meta strong { color: #e5e7eb; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .status-completed { background: rgba(34,211,238,0.2); color: #22d3ee; }
+    .status-failed { background: rgba(244,63,94,0.2); color: #f43f5e; }
+    .status-pending { background: rgba(251,191,36,0.2); color: #fbbf24; }
+    .download-link { color: #67e8f9; text-decoration: none; font-weight: 600; transition: color 0.2s ease; }
+    .download-link:hover { color: #22d3ee; }
+    .run-error { margin-top: 8px; padding: 8px; background: rgba(244,63,94,0.1); border-left: 3px solid #f43f5e; color: #fecdd3; font-size: 14px; }
+    .run-prompt { margin-top: 8px; color: #cbd5e1; white-space: pre-wrap; font-size: 14px; line-height: 1.5; }
+    .empty-state { padding: 32px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px; color: #94a3b8; text-align: center; }
+  </style>
+  <div class="history-shell">
+    <h1>📜 Run History</h1>
+    <p class="desc">Latest generated videos and prompts.</p>
+    <div class="run-list">
+      {% for run in runs %}
+        <div class="run-card">
+          <div class="run-header">
+            <div class="run-meta">
+              <strong>{{ run.created_at }}</strong>
+              <span class="status-badge status-{{ run.status }}">{{ run.status }}</span>
+              • {{ run.aspect }} • {{ run.image_provider }} • {{ run.scenes }} scenes / {{ run.duration }}s
+            </div>
+            <div>
+              {% if run.output_path %}
+                <a class="download-link" href="{{ url_for('download', filename=run.output_path.split('/')[-1]) }}">⬇️ Download</a>
+              {% endif %}
+            </div>
+          </div>
+          {% if run.error %}
+            <div class="run-error">⚠️ {{ run.error }}</div>
+          {% endif %}
+          <div class="run-prompt">{{ run.prompt }}</div>
+        </div>
+      {% else %}
+        <div class="empty-state">No runs yet. Generate your first video! 🎬</div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

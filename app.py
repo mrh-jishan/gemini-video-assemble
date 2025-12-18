@@ -1,6 +1,6 @@
-from video_app.config import Settings
-from video_app.config_store import ConfigStore
-from video_app.server import create_app
+from gemini_video_assemble.config import Settings
+from gemini_video_assemble.config_store import ConfigStore
+from gemini_video_assemble.server import create_app
 
 app = create_app()
 

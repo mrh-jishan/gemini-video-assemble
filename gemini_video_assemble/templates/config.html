@@ -1,0 +1,111 @@
+{% extends "layout.html" %}
+{% block title %}Config{% endblock %}
+{% block content %}
+  <style>
+    .config-shell { background: linear-gradient(135deg, rgba(17,24,39,0.9), rgba(15,23,42,0.9)); border: 1px solid rgba(34, 211, 238, 0.2); border-radius: 16px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.01em; font-weight: 700; }
+    .desc { margin: 0 0 32px; color: #94a3b8; font-size: 16px; }
+    .message { margin: 0 0 24px; padding: 16px; border: 1px solid rgba(34,211,238,0.3); border-radius: 10px; background: #0b1222; color: #a5f3fc; display: flex; align-items: center; gap: 8px; }
+    
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 16px; font-weight: 700; color: #22d3ee; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid rgba(34,211,238,0.2); display: flex; align-items: center; gap: 8px; }
+    .section-desc { font-size: 14px; color: #94a3b8; margin-bottom: 16px; }
+    
+    .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .field-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .field-grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    
+    .field-wrapper { display: flex; flex-direction: column; }
+    .field-label { margin-bottom: 8px; font-weight: 600; color: #cbd5e1; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+    .field-hint { font-size: 12px; color: #64748b; margin-top: 4px; }
+    .required-badge { background: rgba(244,63,94,0.2); color: #f43f5e; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    
+    .submit-wrapper { margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); }
+  </style>
+  <div class="config-shell">
+    <h1>⚙️ Runtime Config</h1>
+    <p class="desc">Set API keys and defaults without restarting the server. Values are stored locally in SQLite.</p>
+    {% if message %}<div class="message"><span>✅</span> {{ message }}</div>{% endif %}
+    
+    <form method="POST">
+      <!-- API Keys Section -->
+      <div class="section">
+        <div class="section-title">🔑 API Keys</div>
+        <div class="section-desc">Configure API keys for Gemini, stock images, and audio services.</div>
+        <div class="field-grid-3">
+          <div class="field-wrapper">
+            <label class="field-label">
+              Google API Key
+              <span class="required-badge">Required</span>
+            </label>
+            <input name="google_api_key" value="{{ settings.google_api_key or '' }}" placeholder="sk-..." type="password">
+            <div class="field-hint">Used for Gemini text/image generation and TTS</div>
+          </div>
+          <div class="field-wrapper">
+            <label class="field-label">Pixabay API Key</label>
+            <input name="pixabay_key" value="{{ settings.pixabay_key or '' }}" placeholder="Optional" type="password">
+            <div class="field-hint">For stock images/videos instead of AI generation</div>
+          </div>
+          <div class="field-wrapper">
+            <label class="field-label">Freesound API Key</label>
+            <input name="freesound_key" value="{{ settings.freesound_key or '' }}" placeholder="Optional" type="password">
+            <div class="field-hint">For background music and scene sound effects</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Models Section -->
+      <div class="section">
+        <div class="section-title">🤖 AI Models</div>
+        <div class="section-desc">Configure which Gemini models to use for text planning and image generation.</div>
+        <div class="field-grid-2">
+          <div class="field-wrapper">
+            <label class="field-label">Text Model</label>
+            <input name="gemini_text_model" value="{{ settings.gemini_text_model }}">
+            <div class="field-hint">Used for scene planning (e.g., gemini-1.5-flash-latest)</div>
+          </div>
+          <div class="field-wrapper">
+            <label class="field-label">Image Model</label>
+            <input name="gemini_image_model" value="{{ settings.gemini_image_model }}">
+            <div class="field-hint">Used for visual generation (e.g., imagen-3.0-generate-001)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Text-to-Speech Section -->
+      <div class="section">
+        <div class="section-title">🗣️ Text-to-Speech</div>
+        <div class="section-desc">Configure voice narration language and voice model.</div>
+        <div class="field-grid-2">
+          <div class="field-wrapper">
+            <label class="field-label">Language</label>
+            <input name="tts_lang" value="{{ settings.tts_lang }}">
+            <div class="field-hint">Language code (e.g., en, es, fr, de)</div>
+          </div>
+          <div class="field-wrapper">
+            <label class="field-label">Voice</label>
+            <input name="tts_voice" value="{{ settings.tts_voice }}">
+            <div class="field-hint">Voice identifier (e.g., en-US-JennyNeural)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output Settings Section -->
+      <div class="section">
+        <div class="section-title">📁 Output Settings</div>
+        <div class="section-desc">Configure where rendered videos are saved.</div>
+        <div class="field-grid">
+          <div class="field-wrapper">
+            <label class="field-label">Output Directory</label>
+            <input name="output_dir" value="{{ settings.output_dir }}">
+            <div class="field-hint">Path to save rendered videos (absolute or relative)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="submit-wrapper">
+        <button type="submit">💾 Save Configuration</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

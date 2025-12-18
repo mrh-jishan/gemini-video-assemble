@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, render_template, request, send_file, redirect, url_for
 
 from .config import Settings
 from .config_store import ConfigStore
@@ -97,43 +97,33 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
         image_provider = "stock"
         video_path = None
         error = None
-        config_saved = None
-        runs = data_store.list_runs(limit=10)
-
         if request.method == "POST":
             form = request.form or {}
-            form_type = form.get("form_type", "render")
-            if form_type == "config":
-                updates = {
-                    "GOOGLE_API_KEY": form.get("google_api_key") or None,
-                    "PIXABAY_KEY": form.get("pixabay_key") or None,
-                    "FREESOUND_KEY": form.get("freesound_key") or None,
-                    "GEMINI_TEXT_MODEL": form.get("gemini_text_model") or None,
-                    "GEMINI_IMAGE_MODEL": form.get("gemini_image_model") or None,
-                    "TTS_LANG": form.get("tts_lang") or None,
-                    "TTS_VOICE": form.get("tts_voice") or None,
-                    "OUTPUT_DIR": form.get("output_dir") or None,
-                }
-                config_store.update(updates)
-                config_saved = "Configuration saved. New requests will use these values."
-                settings = current_settings()
-                aspect = settings.default_aspect
-                image_provider = "stock"
+            prompt = form.get("prompt", "").strip()
+            duration = int(form.get("duration") or 60)
+            scenes = int(form.get("scenes") or 5)
+            aspect = form.get("aspect") or settings.default_aspect
+            image_provider = form.get("image_provider") or "stock"
+            if not prompt:
+                error = "Prompt is required."
             else:
-                prompt = form.get("prompt", "").strip()
-                duration = int(form.get("duration") or 60)
-                scenes = int(form.get("scenes") or 5)
-                aspect = form.get("aspect") or settings.default_aspect
-                image_provider = form.get("image_provider") or "stock"
-                if not prompt:
-                    error = "Prompt is required."
-                else:
-                    try:
-                        video_path = build_pipeline().build_video_from_prompt(
-                            prompt, duration, scenes, aspect, image_provider
-                        )
-                    except Exception as exc:  # noqa: BLE001
-                        error = str(exc)
+                run_id = data_store.record_run(
+                    prompt=prompt,
+                    duration=duration,
+                    scenes=scenes,
+                    aspect=aspect,
+                    image_provider=image_provider,
+                    status="pending",
+                )
+                try:
+                    output_path = build_pipeline().build_video_from_prompt(
+                        prompt, duration, scenes, aspect, image_provider
+                    )
+                    data_store.update_run(run_id, status="completed", output_path=str(output_path))
+                    video_path = output_path
+                except Exception as exc:  # noqa: BLE001
+                    data_store.update_run(run_id, status="failed", error=str(exc))
+                    error = str(exc)
 
         return render_template(
             "index.html",
@@ -144,9 +134,33 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
             image_provider=image_provider,
             video_path=video_path,
             error=error,
-            config_saved=config_saved,
             settings=settings,
-            runs=runs,
         )
+
+    @app.route("/config", methods=["GET", "POST"]) 
+    def config_page():
+        settings = current_settings()
+        message = None
+        if request.method == "POST":
+            form = request.form or {}
+            updates = {
+                "GOOGLE_API_KEY": form.get("google_api_key") or None,
+                "PIXABAY_KEY": form.get("pixabay_key") or None,
+                "FREESOUND_KEY": form.get("freesound_key") or None,
+                "GEMINI_TEXT_MODEL": form.get("gemini_text_model") or None,
+                "GEMINI_IMAGE_MODEL": form.get("gemini_image_model") or None,
+                "TTS_LANG": form.get("tts_lang") or None,
+                "TTS_VOICE": form.get("tts_voice") or None,
+                "OUTPUT_DIR": form.get("output_dir") or None,
+            }
+            config_store.update(updates)
+            message = "Configuration saved. New requests will use these values."
+            settings = current_settings()
+        return render_template("config.html", settings=settings, message=message)
+
+    @app.route("/history", methods=["GET"]) 
+    def history_page():
+        runs = data_store.list_runs(limit=100)
+        return render_template("history.html", runs=runs)
 
     return app

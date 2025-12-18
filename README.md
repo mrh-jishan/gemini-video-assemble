@@ -337,7 +337,7 @@ Result: Professional, balanced mix where:
 All settings are loaded from `.env`:
 
 ```python
-# video_app/config.py
+# gemini_video_assemble/config.py
 class Settings:
     # API Keys
     google_api_key: str              # Google Gemini + TTS
@@ -380,7 +380,7 @@ VisaGuidanceBD-NB/
 ├── README.md               # Original documentation
 ├── renders/                # Output video directory
 ├── image-cache/            # Cached images by hash
-└── video_app/
+└── gemini_video_assemble/
     ├── __init__.py
     ├── config.py           # Settings & environment loading
     ├── models.py           # Scene dataclass with all metadata
@@ -542,7 +542,7 @@ Result: Professional product video with AI-generated product images, marketing c
 ## Contributing
 
 To add new features:
-1. Modify relevant module in `video_app/`
+1. Modify relevant module in `gemini_video_assemble/`
 2. Update pipeline orchestration in `pipeline.py` if needed
 3. Test with `/api/render` endpoint
 4. Update README with new settings/examples
@@ -551,16 +551,16 @@ To add new features:
 ## Common Customizations
 
 ### Change subtitle animation effects
-Edit `_apply_subtitle_effect()` in `video_app/assembler.py` - modify effects array (currently 4 effects).
+Edit `_apply_subtitle_effect()` in `gemini_video_assemble/assembler.py` - modify effects array (currently 4 effects).
 
 ### Adjust audio volumes
-In `video_app/assembler.py`:
+In `gemini_video_assemble/assembler.py`:
 - Line ~220: SFX volume (currently 40%)
 - Line ~330: Background music volume (currently 30%)
 - Line ~240: Break audio volume (currently 50%)
 
 ### Modify break clip duration
-In `video_app/pipeline.py`, change `break_duration=2.5` to desired seconds.
+In `gemini_video_assemble/pipeline.py`, change `break_duration=2.5` to desired seconds.
 
 ### Change Ken Burns zoom strength
 In `.env`: `KENBURNS_ZOOM=0.04` (higher = more dramatic zoom)
