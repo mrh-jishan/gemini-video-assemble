@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gemini-video-assemble"
+version = "0.1.0"
+description = "Prompt-to-video assembly service powered by Gemini, packaged as an installable server."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "Prompt Video Authors" }]
+dependencies = [
+  "Flask>=3.0.0",
+  "moviepy>=1.0.3",
+  "requests>=2.31.0",
+  "google-genai>=0.1.0",
+  "gunicorn>=21.2.0",
+  "gTTS>=2.5.1",
+  "Pillow>=10.1.0",
+]
+
+[project.scripts]
+gemini-video-server = "video_app.cli:main"
+
+[tool.setuptools]
+packages = { find = {} }
+include-package-data = true
+
+[tool.setuptools.package-data]
+"video_app" = ["templates/*.html"]

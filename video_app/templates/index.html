@@ -106,9 +106,10 @@
     <p class="lead">Generate a narrated, multi-scene clip with smooth transitions.</p>
 
     <form method="POST" class="grid">
+      <input type="hidden" name="form_type" value="render">
       <div>
         <label for="prompt">Prompt</label>
-        <textarea id="prompt" name="prompt" rows="20" required>{{ prompt }}</textarea>
+        <textarea id="prompt" name="prompt" rows="12" required>{{ prompt }}</textarea>
       </div>
       <div class="row">
         <div>
@@ -137,8 +138,93 @@
       <button type="submit">Render Video</button>
     </form>
 
+    <div class="status" style="margin-top: 28px;">
+      <strong>Runtime Config</strong>
+      <p style="margin: 6px 0 16px; color: var(--muted);">Set API keys and defaults without restarting the server. Values are stored locally.</p>
+      <form method="POST" class="grid" style="gap: 12px;">
+        <input type="hidden" name="form_type" value="config">
+        <div class="row">
+          <div>
+            <label for="google_api_key">GOOGLE_API_KEY</label>
+            <input id="google_api_key" name="google_api_key" value="{{ settings.google_api_key or '' }}" placeholder="Required for Gemini">
+          </div>
+          <div>
+            <label for="pixabay_key">PIXABAY_KEY</label>
+            <input id="pixabay_key" name="pixabay_key" value="{{ settings.pixabay_key or '' }}" placeholder="Optional for stock images">
+          </div>
+          <div>
+            <label for="freesound_key">FREESOUND_KEY</label>
+            <input id="freesound_key" name="freesound_key" value="{{ settings.freesound_key or '' }}" placeholder="Optional for music/SFX">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="gemini_text_model">GEMINI_TEXT_MODEL</label>
+            <input id="gemini_text_model" name="gemini_text_model" value="{{ settings.gemini_text_model }}">
+          </div>
+          <div>
+            <label for="gemini_image_model">GEMINI_IMAGE_MODEL</label>
+            <input id="gemini_image_model" name="gemini_image_model" value="{{ settings.gemini_image_model }}">
+          </div>
+          <div>
+            <label for="default_image_provider">DEFAULT_IMAGE_PROVIDER</label>
+            <select id="default_image_provider" name="default_image_provider">
+              <option value="gemini" {% if settings.default_image_provider == 'gemini' %}selected{% endif %}>Gemini</option>
+              <option value="stock" {% if settings.default_image_provider == 'stock' %}selected{% endif %}>Stock</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="tts_lang">TTS_LANG</label>
+            <input id="tts_lang" name="tts_lang" value="{{ settings.tts_lang }}">
+          </div>
+          <div>
+            <label for="tts_voice">TTS_VOICE</label>
+            <input id="tts_voice" name="tts_voice" value="{{ settings.tts_voice }}">
+          </div>
+          <div>
+            <label for="output_dir">OUTPUT_DIR</label>
+            <input id="output_dir" name="output_dir" value="{{ settings.output_dir }}">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="port">PORT</label>
+            <input id="port" name="port" type="number" value="{{ settings.port }}">
+          </div>
+        </div>
+        <button type="submit">Save Config</button>
+      </form>
+    </div>
+
+    {% if runs %}
+    <div class="status" style="margin-top: 18px;">
+      <strong>Recent Runs</strong>
+      <div style="margin-top: 8px; display: grid; gap: 8px;">
+        {% for run in runs %}
+          <div style="padding: 10px; border-radius: 10px; background: #0f172a; border: 1px solid rgba(255,255,255,0.06);">
+            <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <span style="color: #cbd5e1;">{{ run.created_at }} • {{ run.status|upper }}</span>
+              {% if run.output_path %}
+                <a class="link" href="{{ url_for('download', filename=run.output_path.split('/')[-1]) }}">Download</a>
+              {% endif %}
+            </div>
+            <div style="margin-top: 6px; color: var(--muted); font-size: 14px;">
+              {{ run.prompt }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     {% if error %}
     <div class="status error">{{ error }}</div>
+    {% endif %}
+
+    {% if config_saved %}
+    <div class="status success">{{ config_saved }}</div>
     {% endif %}
 
     {% if video_path %}

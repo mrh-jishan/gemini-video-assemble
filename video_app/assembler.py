@@ -178,7 +178,57 @@ class VideoAssembler:
         except Exception:
             return clip
     
-    def build(self, scenes: List[Scene], output_path: Path) -> Path:
+    def _create_break_clip(self, scene: Scene, break_duration: float = 2.5) -> Optional[object]:
+        """Create a break clip with scene title on Pixabay image with background audio."""
+        try:
+            # Load image for break
+            if not scene.image_path or not Path(scene.image_path).exists():
+                print(f"[Break] Warning: No image for break clip of scene '{scene.title}'")
+                return None
+            
+            # Create image clip with break duration
+            image_clip = ImageClip(str(scene.image_path)).with_duration(break_duration)
+            image_clip = self._fit_to_frame(image_clip)
+            
+            # Create title text overlay with larger font for break
+            title_fontsize = int(self._get_subtitle_fontsize() * 1.5)
+            try:
+                title_clip = self._create_text_clip(
+                    scene.title, 
+                    break_duration, 
+                    int(self.target_size[0] * 0.85) if self.target_size else None,
+                    fontsize=title_fontsize
+                )
+                if title_clip:
+                    title_clip = title_clip.with_position(("center", "center"))
+                    # Add fade in/out effects to title
+                    title_clip = title_clip.with_effects([vfx.FadeIn(0.3), vfx.FadeOut(0.3)])
+                    image_clip = CompositeVideoClip([image_clip, title_clip])
+            except Exception as e:
+                print(f"[Break] Warning: Could not add title to break clip: {e}")
+            
+            # Add audio to break if available
+            if hasattr(scene, 'break_audio_path') and scene.break_audio_path and Path(scene.break_audio_path).exists():
+                try:
+                    break_audio = AudioFileClip(str(scene.break_audio_path))
+                    # Trim or loop audio to match break duration
+                    if break_audio.duration > break_duration:
+                        break_audio = break_audio.subclipped(0, break_duration)
+                    elif break_audio.duration < break_duration:
+                        num_loops = int(break_duration / break_audio.duration) + 1
+                        break_audio = concatenate_audioclips([break_audio] * num_loops).subclip(0, break_duration)
+                    # Reduce volume to 50% so it's subtle
+                    break_audio = break_audio.with_effects([afx.MultiplyVolume(0.5)])
+                    image_clip = image_clip.with_audio(break_audio)
+                except Exception as e:
+                    print(f"[Break] Warning: Could not add audio to break: {e}")
+            
+            return image_clip
+        except Exception as e:
+            print(f"[Break] Error creating break clip for '{scene.title}': {e}")
+            return None
+    
+    def build(self, scenes: List[Scene], output_path: Path, include_breaks: bool = True) -> Path:
         print(f"Building video at {output_path} with {len(scenes)} scenes")
         print(f"[Assembler] Background music path provided: {self.background_music_path}")
         clips = []
@@ -255,6 +305,12 @@ class VideoAssembler:
             if idx > 0 and self.crossfade_sec > 0:
                 clip = clip.with_effects([vfx.FadeIn(self.crossfade_sec)])
             clips.append(clip)
+            
+            # Add break clip after each scene (except the last one)
+            if include_breaks and idx < len(scenes) - 1:
+                break_clip = self._create_break_clip(scene, break_duration=2.5)
+                if break_clip:
+                    clips.append(break_clip)
 
         padding = -self.crossfade_sec if self.crossfade_sec > 0 else 0
         final = concatenate_videoclips(clips, method="compose", padding=padding)
@@ -275,7 +331,7 @@ class VideoAssembler:
                     bg_audio = concatenate_audioclips([bg_audio] * num_loops)
                 
                 # Trim to exact video duration
-                bg_audio = bg_audio.subclip(0, video_duration)
+                bg_audio = bg_audio.subclipped(0, video_duration)
                 print(f"[Background Music] Trimmed to {bg_audio.duration}s")
 
                 # Mix background audio at lower volume (30%) with main audio (70%)

@@ -17,3 +17,4 @@ class Scene:
     audio_path: Optional[Path] = None
     video_path: Optional[Path] = None
     sfx_path: Optional[Path] = None
+    break_audio_path: Optional[Path] = None
