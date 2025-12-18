@@ -27,3 +27,6 @@ renders/
 
 # Image cache
 image-cache/
+
+# Packaging
+.pypirc
