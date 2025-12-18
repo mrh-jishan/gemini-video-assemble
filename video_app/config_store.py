@@ -32,8 +32,6 @@ class ConfigStore:
         "VERTICAL_WIDTH",
         "VERTICAL_HEIGHT",
         "OUTPUT_DIR",
-        "DEFAULT_IMAGE_PROVIDER",
-        "PORT",
     }
 
     def __init__(

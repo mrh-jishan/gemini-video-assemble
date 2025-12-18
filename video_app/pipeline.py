@@ -95,7 +95,9 @@ class VideoPipeline:
             print("[Music] FREESOUND_KEY not set; skipping background music.")
 
         assembler = self._build_assembler(aspect_choice, background_music_path)
-        provider = (image_provider or self.settings.default_image_provider).lower()
+        provider = (image_provider or "").lower()
+        if provider not in {"gemini", "stock"}:
+            raise RuntimeError("image_provider is required and must be 'gemini' or 'stock'")
         target_size = self._aspect_to_size(aspect_choice)
         orientation = "vertical" if aspect_choice == "vertical" else "horizontal"
 

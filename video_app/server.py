@@ -29,12 +29,15 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
         if not prompt:
             return jsonify({"error": "prompt is required"}), 400
 
+        if image_provider not in {"gemini", "stock"}:
+            return jsonify({"error": "image_provider must be 'gemini' or 'stock'"}), 400
+
         run_id = data_store.record_run(
             prompt=prompt,
             duration=duration,
             scenes=scenes,
             aspect=aspect,
-            image_provider=image_provider or current_settings().default_image_provider,
+            image_provider=image_provider,
             status="pending",
         )
         try:
@@ -91,7 +94,7 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
         duration = 60
         scenes = 5
         aspect = settings.default_aspect
-        image_provider = settings.default_image_provider
+        image_provider = "stock"
         video_path = None
         error = None
         config_saved = None
@@ -109,21 +112,19 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
                     "GEMINI_IMAGE_MODEL": form.get("gemini_image_model") or None,
                     "TTS_LANG": form.get("tts_lang") or None,
                     "TTS_VOICE": form.get("tts_voice") or None,
-                    "DEFAULT_IMAGE_PROVIDER": form.get("default_image_provider") or None,
                     "OUTPUT_DIR": form.get("output_dir") or None,
-                    "PORT": form.get("port") or None,
                 }
                 config_store.update(updates)
                 config_saved = "Configuration saved. New requests will use these values."
                 settings = current_settings()
                 aspect = settings.default_aspect
-                image_provider = settings.default_image_provider
+                image_provider = "stock"
             else:
                 prompt = form.get("prompt", "").strip()
                 duration = int(form.get("duration") or 60)
                 scenes = int(form.get("scenes") or 5)
                 aspect = form.get("aspect") or settings.default_aspect
-                image_provider = form.get("image_provider") or settings.default_image_provider
+                image_provider = form.get("image_provider") or "stock"
                 if not prompt:
                     error = "Prompt is required."
                 else:

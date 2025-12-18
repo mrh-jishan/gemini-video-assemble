@@ -17,7 +17,6 @@ class Settings:
     gemini_image_model: str = "imagen-3.0-generate-001"
     tts_lang: str = "en"
     tts_voice: str = "en-US-JennyNeural"
-    default_image_provider: str = "gemini"
     pixabay_key: Optional[str] = None
     freesound_key: Optional[str] = None
     output_dir: Path = field(default_factory=lambda: Path("renders").resolve())
@@ -50,7 +49,6 @@ class Settings:
             gemini_image_model=pick("GEMINI_IMAGE_MODEL", cls.gemini_image_model),
             tts_lang=pick("TTS_LANG", cls.tts_lang),
             tts_voice=pick("TTS_VOICE", cls.tts_voice),
-            default_image_provider=pick("DEFAULT_IMAGE_PROVIDER", cls.default_image_provider),
             pixabay_key=pick("PIXABAY_KEY"),
             freesound_key=pick("FREESOUND_KEY"),
             output_dir=Path(pick("OUTPUT_DIR", "renders")).resolve(),
@@ -107,8 +105,6 @@ class Settings:
             "VERTICAL_WIDTH": self.vertical_size[0],
             "VERTICAL_HEIGHT": self.vertical_size[1],
             "OUTPUT_DIR": str(self.output_dir),
-            "DEFAULT_IMAGE_PROVIDER": self.default_image_provider,
-            "PORT": self.port,
         }
 
         if mask_secrets:

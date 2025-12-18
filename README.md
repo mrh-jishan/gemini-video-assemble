@@ -367,7 +367,6 @@ class Settings:
     # Output
     output_dir: Path                 # "./renders"
     default_aspect: str              # "horizontal"
-    default_image_provider: str      # "gemini"
 ```
 
 ## Project Structure
