@@ -83,6 +83,8 @@ pip install .
 
 # Launch server (loads ~/.gemini_video_assemble/config.json overrides + env vars)
 gemini-video-server --host 0.0.0.0 --port 5000
+# or:
+python -m gemini_video_assemble --host 0.0.0.0 --port 5000
 
 # Optional: purge cached data/config and renders
 gemini-video-server --purge-data
