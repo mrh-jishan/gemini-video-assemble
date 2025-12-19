@@ -30,3 +30,4 @@ image-cache/
 
 # Packaging
 .pypirc
+gemini_video_assemble/_version.py
