@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, render_template, request, send_file, redirect, url_for
+import threading
 
 from .config import Settings
 from .config_store import ConfigStore
@@ -40,16 +41,22 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
             image_provider=image_provider,
             status="pending",
         )
-        try:
-            output_path = build_pipeline().build_video_from_prompt(
-                prompt, duration, scenes, aspect, image_provider
-            )
-            data_store.update_run(run_id, status="completed", output_path=str(output_path))
-        except Exception as exc:  # noqa: BLE001
-            data_store.update_run(run_id, status="failed", error=str(exc))
-            return jsonify({"error": str(exc)}), 500
 
-        return jsonify({"status": "ok", "path": str(output_path), "run_id": run_id})
+        def _background_render(r_id, p, d, s, a, i):
+            try:
+                output_path = build_pipeline().build_video_from_prompt(p, d, s, a, i)
+                data_store.update_run(r_id, status="completed", output_path=str(output_path))
+            except Exception as exc:
+                data_store.update_run(r_id, status="failed", error=str(exc))
+                print(f"Background render failed for run {r_id}: {exc}")
+
+        thread = threading.Thread(
+            target=_background_render,
+            args=(run_id, prompt, duration, scenes, aspect, image_provider),
+        )
+        thread.start()
+
+        return jsonify({"status": "submitted", "run_id": run_id, "message": "Video generation started in background"})
 
     @app.route("/api/config", methods=["GET"])
     def get_config():

@@ -17,6 +17,8 @@
     .status-pending { background: rgba(251,191,36,0.2); color: #fbbf24; }
     .download-link { color: #67e8f9; text-decoration: none; font-weight: 600; transition: color 0.2s ease; }
     .download-link:hover { color: #22d3ee; }
+    .retry-btn { background: rgba(34, 211, 238, 0.1); color: #22d3ee; border: 1px solid rgba(34, 211, 238, 0.2); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; margin-left: 8px; }
+    .retry-btn:hover { background: rgba(34, 211, 238, 0.2); transform: translateY(-1px); }
     .run-error { margin-top: 8px; padding: 8px; background: rgba(244,63,94,0.1); border-left: 3px solid #f43f5e; color: #fecdd3; font-size: 14px; }
     .run-prompt { margin-top: 8px; color: #cbd5e1; white-space: pre-wrap; font-size: 14px; line-height: 1.5; }
     .empty-state { padding: 32px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px; color: #94a3b8; text-align: center; }
@@ -37,6 +39,9 @@
               {% if run.output_path %}
                 <a class="download-link" href="{{ url_for('download', filename=run.output_path.split('/')[-1]) }}">⬇️ Download</a>
               {% endif %}
+              {% if run.status == 'failed' %}
+                <button class="retry-btn" onclick='retryRun({{ run | tojson | safe }})'>🔄 Retry</button>
+              {% endif %}
             </div>
           </div>
           {% if run.error %}
@@ -49,4 +54,44 @@
       {% endfor %}
     </div>
   </div>
+
+  <script>
+    async function retryRun(run) {
+      if (!confirm('Start a new render with these same settings?')) return;
+      
+      const btn = event.target;
+      const originalText = btn.innerText;
+      btn.innerText = '⏳ Queuing...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/api/render', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: run.prompt,
+            duration: run.duration,
+            scenes: run.scenes,
+            aspect: run.aspect,
+            image_provider: run.image_provider
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          // Reload to show the new pending run
+          window.location.reload();
+        } else {
+          alert('Failed to retry: ' + (result.error || 'Unknown error'));
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+  </script>
 {% endblock %}

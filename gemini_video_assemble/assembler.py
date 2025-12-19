@@ -10,6 +10,7 @@ from moviepy import (
     ImageClip,
     TextClip,
     VideoFileClip,
+    ColorClip,
     concatenate_videoclips,
     concatenate_audioclips,
     vfx,
@@ -182,13 +183,36 @@ class VideoAssembler:
         """Create a break clip with scene title on Pixabay image with background audio."""
         try:
             # Load image for break
-            if not scene.image_path or not Path(scene.image_path).exists():
-                print(f"[Break] Warning: No image for break clip of scene '{scene.title}'")
+            image_clip = None
+            if scene.image_path and Path(scene.image_path).exists():
+                image_clip = ImageClip(str(scene.image_path))
+            elif scene.video_path and Path(scene.video_path).exists():
+                try:
+                    with VideoFileClip(str(scene.video_path)) as vid:
+                        frame = vid.get_frame(0)
+                        image_clip = ImageClip(frame)
+                except Exception as e:
+                    print(f"[Break] Failed to extract frame from video: {e}")
+
+            if not image_clip:
+                print(f"[Break] Warning: No visual asset for break clip of scene '{scene.title}'")
                 return None
             
             # Create image clip with break duration
-            image_clip = ImageClip(str(scene.image_path)).with_duration(break_duration)
+            image_clip = image_clip.with_duration(break_duration)
             image_clip = self._fit_to_frame(image_clip)
+            
+            # Add dimming overlay (semi-transparent black)
+            if self.target_size:
+                w, h = self.target_size
+            else:
+                w, h = image_clip.size
+            
+            try:
+                dim_clip = ColorClip(size=(w, h), color=(0, 0, 0)).with_opacity(0.5).with_duration(break_duration)
+                image_clip = CompositeVideoClip([image_clip, dim_clip])
+            except Exception as e:
+                print(f"[Break] Warning: Could not add dimming overlay: {e}")
             
             # Create title text overlay with larger font for break
             title_fontsize = int(self._get_subtitle_fontsize() * 1.5)
@@ -216,7 +240,7 @@ class VideoAssembler:
                         break_audio = break_audio.subclipped(0, break_duration)
                     elif break_audio.duration < break_duration:
                         num_loops = int(break_duration / break_audio.duration) + 1
-                        break_audio = concatenate_audioclips([break_audio] * num_loops).subclip(0, break_duration)
+                        break_audio = concatenate_audioclips([break_audio] * num_loops).subclipped(0, break_duration)
                     # Reduce volume to 50% so it's subtle
                     break_audio = break_audio.with_effects([afx.MultiplyVolume(0.5)])
                     image_clip = image_clip.with_audio(break_audio)
@@ -308,7 +332,9 @@ class VideoAssembler:
             
             # Add break clip after each scene (except the last one)
             if include_breaks and idx < len(scenes) - 1:
-                break_clip = self._create_break_clip(scene, break_duration=2.5)
+                # Use the NEXT scene for the break clip (Chapter Intro)
+                next_scene = scenes[idx + 1]
+                break_clip = self._create_break_clip(next_scene, break_duration=2.5)
                 if break_clip:
                     clips.append(break_clip)
 

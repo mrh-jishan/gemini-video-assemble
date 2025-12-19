@@ -144,27 +144,90 @@
       document.getElementById('prompt').value = text;
     }
 
-    document.getElementById('renderForm').addEventListener('submit', function(e) {
+    document.getElementById('renderForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
       const submitBtn = document.getElementById('submitBtn');
       const loadingOverlay = document.getElementById('loadingOverlay');
+      const form = this;
       
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '⏳ Processing...';
-      loadingOverlay.classList.add('active');
+      submitBtn.innerHTML = '⏳ Starting...';
       
-      // Animate loading steps
-      const steps = document.querySelectorAll('.loading-steps div');
-      let currentStep = 0;
-      const stepInterval = setInterval(() => {
-        if (currentStep > 0) {
-          steps[currentStep - 1].style.opacity = '0.5';
+      // Show submitting state
+      loadingOverlay.classList.add('active');
+      const loadingText = document.querySelector('.loading-text');
+      const loadingSubtext = document.querySelector('.loading-subtext');
+      const loadingSteps = document.querySelector('.loading-steps');
+      
+      const originalText = loadingText.textContent;
+      const originalSubtext = loadingSubtext.textContent;
+      const originalStepsDisplay = loadingSteps.style.display;
+
+      loadingText.textContent = '🚀 Launching Job...';
+      loadingSubtext.textContent = 'Queueing your video request...';
+      loadingSteps.style.display = 'none';
+
+      const formData = new FormData(form);
+      const data = {
+        prompt: formData.get('prompt'),
+        duration: formData.get('duration'),
+        scenes: formData.get('scenes'),
+        aspect: formData.get('aspect'),
+        image_provider: formData.get('image_provider')
+      };
+
+      try {
+        const response = await fetch('/api/render', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        loadingOverlay.classList.remove('active');
+        
+        // Restore overlay text for next time (if we wanted to use it for something else)
+        setTimeout(() => {
+            loadingText.textContent = originalText;
+            loadingSubtext.textContent = originalSubtext;
+            loadingSteps.style.display = originalStepsDisplay;
+        }, 500);
+
+        if (response.ok) {
+          // Remove old status messages
+          document.querySelectorAll('.status').forEach(el => el.remove());
+
+          // Show success message
+          const statusDiv = document.createElement('div');
+          statusDiv.className = 'status success';
+          statusDiv.innerHTML = `
+            <div style="font-weight: bold; font-size: 18px; margin-bottom: 8px;">✅ Job Started!</div>
+            <div>Your video is being rendered in the background.</div>
+            <div style="margin-top: 8px; font-size: 14px; opacity: 0.9;">
+              Run ID: <code>${result.run_id}</code><br>
+              You can submit another request now. Check <a href="/history" style="text-decoration: underline; font-weight: bold;">History</a> for progress.
+            </div>
+          `;
+          form.parentNode.insertBefore(statusDiv, form.nextSibling);
+          
+          submitBtn.innerHTML = '🎬 Render Another Video';
+        } else {
+          throw new Error(result.error || 'Failed to start job');
         }
-        if (currentStep < steps.length) {
-          steps[currentStep].style.fontWeight = '700';
-          steps[currentStep].style.color = '#22d3ee';
-          currentStep++;
-        }
-      }, 3000);
+      } catch (err) {
+        loadingOverlay.classList.remove('active');
+        document.querySelectorAll('.status').forEach(el => el.remove());
+        
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'status error';
+        statusDiv.textContent = '⚠️ Error: ' + err.message;
+        form.parentNode.insertBefore(statusDiv, form.nextSibling);
+        
+        submitBtn.innerHTML = '🎬 Render Video';
+      } finally {
+        submitBtn.disabled = false;
+      }
     });
   </script>
 {% endblock %}
