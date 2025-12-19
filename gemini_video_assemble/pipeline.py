@@ -13,7 +13,7 @@ from .media import PixabayVideoClient
 from .music import FreesoundClient
 from .models import Scene
 from .planner import PromptBuilder, ScenePlanner
-from .tts import GoogleTTSSynthesizer
+from .tts import AmazonPollySynthesizer, GoogleTTSSynthesizer, TTSSynthesizer
 
 
 class VideoPipeline:
@@ -23,7 +23,26 @@ class VideoPipeline:
         self.gemini_client = genai.Client(api_key=self.settings.google_api_key)
         self.scene_planner = ScenePlanner(self.gemini_client, self.settings.gemini_text_model)
         self.prompt_builder = PromptBuilder(self.settings.image_style)
-        self.tts_client = GoogleTTSSynthesizer(self.settings.tts_lang)
+        self.tts_client = self._build_tts_client()
+
+    def _build_tts_client(self) -> TTSSynthesizer:
+        if self.settings.tts_provider == "polly":
+            if not self.settings.aws_access_key_id or not self.settings.aws_secret_access_key:
+                print("Warning: AWS credentials missing, falling back to Google TTS")
+                return GoogleTTSSynthesizer(self.settings.tts_lang)
+            
+            try:
+                return AmazonPollySynthesizer(
+                    aws_access_key_id=self.settings.aws_access_key_id,
+                    aws_secret_access_key=self.settings.aws_secret_access_key,
+                    region_name=self.settings.aws_region,
+                    voice_id=self.settings.polly_voice_id,
+                    engine=self.settings.polly_engine,
+                )
+            except RuntimeError as e:
+                print(f"Warning: Failed to initialize Amazon Polly ({e}), falling back to Google TTS")
+                return GoogleTTSSynthesizer(self.settings.tts_lang)
+        return GoogleTTSSynthesizer(self.settings.tts_lang)
 
     def _build_image_client(self) -> GeminiImageClient:
         model = self.settings.gemini_image_model

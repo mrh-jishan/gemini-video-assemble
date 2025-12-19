@@ -75,20 +75,68 @@
       <!-- Text-to-Speech Section -->
       <div class="section">
         <div class="section-title">🗣️ Text-to-Speech</div>
-        <div class="section-desc">Configure voice narration language and voice model.</div>
-        <div class="field-grid-2">
+        <div class="section-desc">Configure voice narration provider and settings.</div>
+        
+        <div class="field-wrapper" style="margin-bottom: 20px;">
+          <label class="field-label">Provider</label>
+          <select name="tts_provider" id="ttsProviderSelect" onchange="toggleTTSFields()">
+            <option value="google" {% if settings.tts_provider == 'google' %}selected{% endif %}>Google Translate TTS (Free)</option>
+            <option value="polly" {% if settings.tts_provider == 'polly' %}selected{% endif %}>Amazon Polly (AWS)</option>
+          </select>
+        </div>
+
+        <!-- Google TTS Fields -->
+        <div id="googleFields" class="field-grid-2" style="display: none;">
           <div class="field-wrapper">
-            <label class="field-label">Language</label>
+            <label class="field-label">Language Code</label>
             <input name="tts_lang" value="{{ settings.tts_lang }}">
-            <div class="field-hint">Language code (e.g., en, es, fr, de)</div>
+            <div class="field-hint">e.g., 'en', 'es', 'fr'</div>
           </div>
-          <div class="field-wrapper">
-            <label class="field-label">Voice</label>
-            <input name="tts_voice" value="{{ settings.tts_voice }}">
-            <div class="field-hint">Voice identifier (e.g., en-US-JennyNeural)</div>
+        </div>
+
+        <!-- Amazon Polly Fields -->
+        <div id="pollyFields" style="display: none;">
+          <div class="field-grid-2" style="margin-bottom: 20px;">
+            <div class="field-wrapper">
+              <label class="field-label">AWS Access Key ID</label>
+              <input name="aws_access_key_id" value="{{ settings.aws_access_key_id or '' }}" type="password">
+            </div>
+            <div class="field-wrapper">
+              <label class="field-label">AWS Secret Access Key</label>
+              <input name="aws_secret_access_key" value="{{ settings.aws_secret_access_key or '' }}" type="password">
+            </div>
+          </div>
+          <div class="field-grid-3">
+            <div class="field-wrapper">
+              <label class="field-label">AWS Region</label>
+              <input name="aws_region" value="{{ settings.aws_region }}">
+              <div class="field-hint">e.g., us-east-1</div>
+            </div>
+            <div class="field-wrapper">
+              <label class="field-label">Voice ID</label>
+              <input name="polly_voice_id" value="{{ settings.polly_voice_id }}">
+              <div class="field-hint">e.g., Joanna, Matthew</div>
+            </div>
+            <div class="field-wrapper">
+              <label class="field-label">Engine</label>
+              <select name="polly_engine">
+                <option value="neural" {% if settings.polly_engine == 'neural' %}selected{% endif %}>Neural</option>
+                <option value="standard" {% if settings.polly_engine == 'standard' %}selected{% endif %}>Standard</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
+
+      <script>
+        function toggleTTSFields() {
+          const provider = document.getElementById('ttsProviderSelect').value;
+          document.getElementById('googleFields').style.display = provider === 'google' ? 'grid' : 'none';
+          document.getElementById('pollyFields').style.display = provider === 'polly' ? 'block' : 'none';
+        }
+        // Run on load
+        toggleTTSFields();
+      </script>
 
       <!-- Output Settings Section -->
       <div class="section">

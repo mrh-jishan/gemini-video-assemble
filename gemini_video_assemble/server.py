@@ -156,8 +156,13 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
                 "FREESOUND_KEY": form.get("freesound_key") or None,
                 "GEMINI_TEXT_MODEL": form.get("gemini_text_model") or None,
                 "GEMINI_IMAGE_MODEL": form.get("gemini_image_model") or None,
+                "TTS_PROVIDER": form.get("tts_provider") or None,
                 "TTS_LANG": form.get("tts_lang") or None,
-                "TTS_VOICE": form.get("tts_voice") or None,
+                "AWS_ACCESS_KEY_ID": form.get("aws_access_key_id") or None,
+                "AWS_SECRET_ACCESS_KEY": form.get("aws_secret_access_key") or None,
+                "AWS_REGION": form.get("aws_region") or None,
+                "POLLY_VOICE_ID": form.get("polly_voice_id") or None,
+                "POLLY_ENGINE": form.get("polly_engine") or None,
                 "OUTPUT_DIR": form.get("output_dir") or None,
             }
             config_store.update(updates)

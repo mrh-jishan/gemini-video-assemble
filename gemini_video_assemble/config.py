@@ -15,8 +15,14 @@ class Settings:
     google_api_key: Optional[str] = None
     gemini_text_model: str = "gemini-1.5-flash-latest"
     gemini_image_model: str = "imagen-3.0-generate-001"
+    tts_provider: str = "google"
     tts_lang: str = "en"
     tts_voice: str = "en-US-JennyNeural"
+    aws_access_key_id: Optional[str] = None
+    aws_secret_access_key: Optional[str] = None
+    aws_region: str = "us-east-1"
+    polly_voice_id: str = "Joanna"
+    polly_engine: str = "standard"
     pixabay_key: Optional[str] = None
     freesound_key: Optional[str] = None
     output_dir: Path = field(default_factory=lambda: Path("renders").resolve())
@@ -47,8 +53,14 @@ class Settings:
             google_api_key=pick("GOOGLE_API_KEY"),
             gemini_text_model=pick("GEMINI_TEXT_MODEL", cls.gemini_text_model),
             gemini_image_model=pick("GEMINI_IMAGE_MODEL", cls.gemini_image_model),
+            tts_provider=pick("TTS_PROVIDER", cls.tts_provider),
             tts_lang=pick("TTS_LANG", cls.tts_lang),
             tts_voice=pick("TTS_VOICE", cls.tts_voice),
+            aws_access_key_id=pick("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=pick("AWS_SECRET_ACCESS_KEY"),
+            aws_region=pick("AWS_REGION", cls.aws_region),
+            polly_voice_id=pick("POLLY_VOICE_ID", cls.polly_voice_id),
+            polly_engine=pick("POLLY_ENGINE", cls.polly_engine),
             pixabay_key=pick("PIXABAY_KEY"),
             freesound_key=pick("FREESOUND_KEY"),
             output_dir=Path(pick("OUTPUT_DIR", "renders")).resolve(),
@@ -86,8 +98,14 @@ class Settings:
             "GOOGLE_API_KEY": self.google_api_key,
             "GEMINI_TEXT_MODEL": self.gemini_text_model,
             "GEMINI_IMAGE_MODEL": self.gemini_image_model,
+            "TTS_PROVIDER": self.tts_provider,
             "TTS_LANG": self.tts_lang,
             "TTS_VOICE": self.tts_voice,
+            "AWS_ACCESS_KEY_ID": self.aws_access_key_id,
+            "AWS_SECRET_ACCESS_KEY": self.aws_secret_access_key,
+            "AWS_REGION": self.aws_region,
+            "POLLY_VOICE_ID": self.polly_voice_id,
+            "POLLY_ENGINE": self.polly_engine,
             "PIXABAY_KEY": self.pixabay_key,
             "FREESOUND_KEY": self.freesound_key,
             "CROSSFADE_SEC": self.crossfade_sec,
@@ -108,7 +126,7 @@ class Settings:
         }
 
         if mask_secrets:
-            for key in ("GOOGLE_API_KEY", "PIXABAY_KEY", "FREESOUND_KEY"):
+            for key in ("GOOGLE_API_KEY", "PIXABAY_KEY", "FREESOUND_KEY", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
                 value = data.get(key)
                 if value:
                     data[key] = f"{str(value)[:4]}***"
