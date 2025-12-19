@@ -21,6 +21,8 @@ class ConfigStore:
         "AWS_REGION",
         "POLLY_VOICE_ID",
         "POLLY_ENGINE",
+        "S3_BUCKET_NAME",
+        "S3_PREFIX",
         "PIXABAY_KEY",
         "FREESOUND_KEY",
         "CROSSFADE_SEC",

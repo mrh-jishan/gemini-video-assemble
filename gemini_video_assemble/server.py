@@ -44,7 +44,25 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
 
         def _background_render(r_id, p, d, s, a, i):
             try:
-                output_path = build_pipeline().build_video_from_prompt(p, d, s, a, i)
+                pipeline = build_pipeline()
+                output_path = pipeline.build_video_from_prompt(p, d, s, a, i)
+                
+                # Attempt S3 Upload
+                settings = pipeline.settings
+                if settings.s3_bucket_name and settings.aws_access_key_id and settings.aws_secret_access_key:
+                    try:
+                        from .s3_uploader import S3Uploader
+                        uploader = S3Uploader(
+                            settings.aws_access_key_id,
+                            settings.aws_secret_access_key,
+                            settings.aws_region,
+                            settings.s3_bucket_name
+                        )
+                        s3_url = uploader.upload(output_path, settings.s3_prefix)
+                        print(f"Successfully uploaded to S3: {s3_url}")
+                    except Exception as e:
+                        print(f"Warning: S3 Upload failed: {e}")
+
                 data_store.update_run(r_id, status="completed", output_path=str(output_path))
             except Exception as exc:
                 data_store.update_run(r_id, status="failed", error=str(exc))
@@ -163,6 +181,8 @@ def create_app(config_path: str | None = None, db_path: str | None = None) -> Fl
                 "AWS_REGION": form.get("aws_region") or None,
                 "POLLY_VOICE_ID": form.get("polly_voice_id") or None,
                 "POLLY_ENGINE": form.get("polly_engine") or None,
+                "S3_BUCKET_NAME": form.get("s3_bucket_name") or None,
+                "S3_PREFIX": form.get("s3_prefix") or None,
                 "OUTPUT_DIR": form.get("output_dir") or None,
             }
             config_store.update(updates)

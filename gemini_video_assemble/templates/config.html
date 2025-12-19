@@ -72,6 +72,27 @@
         </div>
       </div>
 
+      <!-- AWS Configuration Section -->
+      <div class="section">
+        <div class="section-title">☁️ AWS Configuration</div>
+        <div class="section-desc">Required for Amazon Polly TTS and S3 Uploads.</div>
+        <div class="field-grid-3">
+          <div class="field-wrapper">
+            <label class="field-label">Access Key ID</label>
+            <input name="aws_access_key_id" value="{{ settings.aws_access_key_id or '' }}" type="password">
+          </div>
+          <div class="field-wrapper">
+            <label class="field-label">Secret Access Key</label>
+            <input name="aws_secret_access_key" value="{{ settings.aws_secret_access_key or '' }}" type="password">
+          </div>
+          <div class="field-wrapper">
+            <label class="field-label">Region</label>
+            <input name="aws_region" value="{{ settings.aws_region }}">
+            <div class="field-hint">e.g., us-east-1</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Text-to-Speech Section -->
       <div class="section">
         <div class="section-title">🗣️ Text-to-Speech</div>
@@ -96,22 +117,7 @@
 
         <!-- Amazon Polly Fields -->
         <div id="pollyFields" style="display: none;">
-          <div class="field-grid-2" style="margin-bottom: 20px;">
-            <div class="field-wrapper">
-              <label class="field-label">AWS Access Key ID</label>
-              <input name="aws_access_key_id" value="{{ settings.aws_access_key_id or '' }}" type="password">
-            </div>
-            <div class="field-wrapper">
-              <label class="field-label">AWS Secret Access Key</label>
-              <input name="aws_secret_access_key" value="{{ settings.aws_secret_access_key or '' }}" type="password">
-            </div>
-          </div>
-          <div class="field-grid-3">
-            <div class="field-wrapper">
-              <label class="field-label">AWS Region</label>
-              <input name="aws_region" value="{{ settings.aws_region }}">
-              <div class="field-hint">e.g., us-east-1</div>
-            </div>
+          <div class="field-grid-2">
             <div class="field-wrapper">
               <label class="field-label">Voice ID</label>
               <input name="polly_voice_id" value="{{ settings.polly_voice_id }}">
@@ -148,6 +154,23 @@
             <input name="output_dir" value="{{ settings.output_dir }}">
             <div class="field-hint">Path to save rendered videos (absolute or relative)</div>
           </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05);">
+          <div class="field-label" style="margin-bottom: 12px;">☁️ S3 Upload (Optional)</div>
+          <div class="field-grid-2">
+            <div class="field-wrapper">
+              <label class="field-label">S3 Bucket Name</label>
+              <input name="s3_bucket_name" value="{{ settings.s3_bucket_name or '' }}" placeholder="my-video-bucket">
+              <div class="field-hint">If set, videos will be uploaded here after rendering</div>
+            </div>
+            <div class="field-wrapper">
+              <label class="field-label">S3 Prefix</label>
+              <input name="s3_prefix" value="{{ settings.s3_prefix }}">
+              <div class="field-hint">Folder path within bucket (e.g., 'videos')</div>
+            </div>
+          </div>
+          <div class="field-hint" style="margin-top: 8px;">Requires AWS credentials to be set in the AWS Configuration section.</div>
         </div>
       </div>
 

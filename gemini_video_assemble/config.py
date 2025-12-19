@@ -23,6 +23,8 @@ class Settings:
     aws_region: str = "us-east-1"
     polly_voice_id: str = "Joanna"
     polly_engine: str = "standard"
+    s3_bucket_name: Optional[str] = None
+    s3_prefix: str = "videos"
     pixabay_key: Optional[str] = None
     freesound_key: Optional[str] = None
     output_dir: Path = field(default_factory=lambda: Path("renders").resolve())
@@ -61,6 +63,8 @@ class Settings:
             aws_region=pick("AWS_REGION", cls.aws_region),
             polly_voice_id=pick("POLLY_VOICE_ID", cls.polly_voice_id),
             polly_engine=pick("POLLY_ENGINE", cls.polly_engine),
+            s3_bucket_name=pick("S3_BUCKET_NAME"),
+            s3_prefix=pick("S3_PREFIX", cls.s3_prefix),
             pixabay_key=pick("PIXABAY_KEY"),
             freesound_key=pick("FREESOUND_KEY"),
             output_dir=Path(pick("OUTPUT_DIR", "renders")).resolve(),
@@ -106,6 +110,8 @@ class Settings:
             "AWS_REGION": self.aws_region,
             "POLLY_VOICE_ID": self.polly_voice_id,
             "POLLY_ENGINE": self.polly_engine,
+            "S3_BUCKET_NAME": self.s3_bucket_name,
+            "S3_PREFIX": self.s3_prefix,
             "PIXABAY_KEY": self.pixabay_key,
             "FREESOUND_KEY": self.freesound_key,
             "CROSSFADE_SEC": self.crossfade_sec,
