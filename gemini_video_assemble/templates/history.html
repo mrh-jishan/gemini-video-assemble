@@ -20,7 +20,12 @@
     .retry-btn { background: rgba(34, 211, 238, 0.1); color: #22d3ee; border: 1px solid rgba(34, 211, 238, 0.2); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; margin-left: 8px; }
     .retry-btn:hover { background: rgba(34, 211, 238, 0.2); transform: translateY(-1px); }
     .run-error { margin-top: 8px; padding: 8px; background: rgba(244,63,94,0.1); border-left: 3px solid #f43f5e; color: #fecdd3; font-size: 14px; }
-    .run-prompt { margin-top: 8px; color: #cbd5e1; white-space: pre-wrap; font-size: 14px; line-height: 1.5; }
+    .run-prompt { margin-top: 8px; }
+    .prompt-body { color: #cbd5e1; white-space: pre-wrap; font-size: 14px; line-height: 1.5; position: relative; }
+    .prompt-body.collapsed { max-height: 120px; overflow: hidden; }
+    .prompt-body.collapsed::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: linear-gradient(to bottom, rgba(11,18,34,0), rgba(11,18,34,0.95)); }
+    .toggle-prompt { margin-top: 6px; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; background: rgba(34,211,238,0.1); color: #22d3ee; border: 1px solid rgba(34,211,238,0.2); }
+    .toggle-prompt:hover { background: rgba(34,211,238,0.2); transform: translateY(-1px); }
     .empty-state { padding: 32px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px; color: #94a3b8; text-align: center; }
   </style>
   <div class="history-shell">
@@ -47,7 +52,10 @@
           {% if run.error %}
             <div class="run-error">⚠️ {{ run.error }}</div>
           {% endif %}
-          <div class="run-prompt">{{ run.prompt }}</div>
+          <div class="run-prompt">
+            <div class="prompt-body collapsed">{{ run.prompt }}</div>
+            <button type="button" class="toggle-prompt" aria-expanded="false">Show more</button>
+          </div>
         </div>
       {% else %}
         <div class="empty-state">No runs yet. Generate your first video! 🎬</div>
@@ -56,6 +64,18 @@
   </div>
 
   <script>
+    // Expand/collapse prompt content
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('.toggle-prompt');
+      if (!btn) return;
+      const body = btn.previousElementSibling;
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', (!expanded).toString());
+      body.classList.toggle('collapsed', expanded);
+      body.classList.toggle('expanded', !expanded);
+      btn.textContent = expanded ? 'Show more' : 'Show less';
+    });
+
     async function retryRun(run) {
       if (!confirm('Start a new render with these same settings?')) return;
       
