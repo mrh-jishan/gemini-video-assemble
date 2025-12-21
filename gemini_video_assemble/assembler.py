@@ -289,7 +289,7 @@ class VideoAssembler:
                         num_loops = int(duration / sfx_audio.duration) + 1
                         sfx_audio = concatenate_audioclips([sfx_audio] * num_loops).subclipped(0, duration)
                     # Reduce SFX volume to 40% so it blends with narration
-                    sfx_audio = sfx_audio.with_effects([afx.MultiplyVolume(0.4)])
+                    sfx_audio = sfx_audio.with_effects([afx.MultiplyVolume(0.2)])
                     # Composite narration + SFX
                     scene_audio = CompositeAudioClip([audio_clip, sfx_audio])
                     clip = clip.with_audio(scene_audio)
@@ -360,9 +360,9 @@ class VideoAssembler:
                 bg_audio = bg_audio.subclipped(0, video_duration)
                 print(f"[Background Music] Trimmed to {bg_audio.duration}s")
 
-                # Mix background audio at lower volume (30%) with main audio (70%)
-                bg_audio = bg_audio.with_effects([afx.MultiplyVolume(0.3)])
-                print(f"[Background Music] Volume reduced to 30%")
+                # Mix background audio at lower volume (20%) with main audio
+                bg_audio = bg_audio.with_effects([afx.MultiplyVolume(0.2)])
+                print(f"[Background Music] Volume reduced to 20%")
 
                 main_audio = final.audio
                 if main_audio:
